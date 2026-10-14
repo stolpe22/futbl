@@ -1,26 +1,166 @@
 @import "tailwindcss";
 
+/* Identidade visual inspirada em candidatos.missao.org.br */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --bg: #faf7f0;
+  --surface: #ffffff;
+  --surface-2: #f4efe3;
+  --ink: #1a160e;
+  --muted: #6e6656;
+  --line: #e6dfcd;
+  --gold: #fdb72d;
+  --gold-ink: #9a6700;
+  --gold-deep: #7a5200;
+  --navy: #1b2333;
+  --navy-2: #232c40;
+  --confirma: #067647;
+  --confirma-bg: #e3f6ec;
+  --talvez: #9a6700;
+  --talvez-bg: #fdf3dc;
+  --danger: #b42318;
+  --danger-bg: #fdecea;
+  --focus: #1b2333;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    --bg: #070604;
+    --surface: #100f0c;
+    --surface-2: #17150f;
+    --ink: #f7f4ec;
+    --muted: #979083;
+    --line: #26231a;
+    --gold: #fdb72d;
+    --gold-ink: #fdb72d;
+    --gold-deep: #c98f1b;
+    --navy: #e8ecf5;
+    --navy-2: #dce2f0;
+    --confirma: #12b76a;
+    --confirma-bg: #0d2a1c;
+    --talvez: #fdb72d;
+    --talvez-bg: #2a2110;
+    --danger: #ff6568;
+    --danger-bg: #2d1112;
+    --focus: #fdb72d;
+    color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #070604;
+  --surface: #100f0c;
+  --surface-2: #17150f;
+  --ink: #f7f4ec;
+  --muted: #979083;
+  --line: #26231a;
+  --gold: #fdb72d;
+  --gold-ink: #fdb72d;
+  --gold-deep: #c98f1b;
+  --navy: #e8ecf5;
+  --navy-2: #dce2f0;
+  --confirma: #12b76a;
+  --confirma-bg: #0d2a1c;
+  --talvez: #fdb72d;
+  --talvez-bg: #2a2110;
+  --danger: #ff6568;
+  --danger-bg: #2d1112;
+  --focus: #fdb72d;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-gold: var(--gold);
+  --color-gold-ink: var(--gold-ink);
+  --color-gold-deep: var(--gold-deep);
+  --color-navy: var(--navy);
+  --color-confirma: var(--confirma);
+  --color-confirma-bg: var(--confirma-bg);
+  --color-talvez: var(--talvez);
+  --color-talvez-bg: var(--talvez-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --font-sans: var(--font-bricolage), "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-bricolage), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* inputs nativos de data/hora no tema escuro */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  color-scheme: inherit;
+}
+
+/* Leaflet: herda o tema */
+.leaflet-container {
+  font-family: inherit;
+  background: var(--surface-2);
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 12px;
+}
+.leaflet-popup-content {
+  margin: 12px 14px;
+}
+.leaflet-container a.leaflet-popup-close-button {
+  color: var(--muted);
+}
+.leaflet-control-attribution {
+  font-size: 10px;
+}
+.pin-campo {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: var(--gold);
+  border: 2px solid #1a160e;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.35);
+}
+.pin-campo > span {
+  transform: rotate(45deg);
+  font-size: 15px;
+  line-height: 1;
+}
+.pin-campo.selected {
+  background: #1a160e;
+  border-color: var(--gold);
+}
+.pin-novo {
+  background: #12b76a;
+}
+.pin-campo .pin-num {
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+}
+.pin-novo.selected {
+  background: #1a160e;
+  border-color: #12b76a;
 }
