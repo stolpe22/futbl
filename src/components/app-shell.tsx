@@ -47,7 +47,7 @@ function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const { profile, loading, error, refresh, isOrganizer, isAdmin } = useSession();
   const [helpOpen, setHelpOpen] = useState(false);
-  const badges = useNavBadges(profile?.id, isOrganizer, path);
+  const badges = useNavBadges(profile?.id, isOrganizer, isAdmin, path);
   useShortcuts(() => setHelpOpen(true));
 
   let body: ReactNode = children;
@@ -198,7 +198,7 @@ function lastSeenSuggestions() {
  * Agenda: jogos marcados sem a sua presença. Votações: abertas sem o seu voto.
  * Sugestões: para organizador, as que esperam aprovação; para jogador, as novas desde a última visita.
  */
-function useNavBadges(me: string | undefined, isOrganizer: boolean, path: string) {
+function useNavBadges(me: string | undefined, isOrganizer: boolean, isAdmin: boolean, path: string) {
   const [badges, setBadges] = useState<Record<string, NavCount>>({});
   const [tick, setTick] = useState(0);
 
@@ -232,7 +232,10 @@ function useNavBadges(me: string | undefined, isOrganizer: boolean, path: string
       sb.from("polls").select("id, closes_at").eq("closed", false),
       sb.from("poll_votes").select("poll_id").eq("user_id", me),
       isOrganizer ? pendingSuggestions : pendingSuggestions.neq("created_by", me).gt("created_at", lastSeenSuggestions()),
-    ]).then(([games, myRsvps, polls, myVotes, suggestions]) => {
+      isAdmin
+        ? sb.from("access_requests").select("id", { count: "exact", head: true }).eq("status", "pendente")
+        : Promise.resolve({ count: 0 }),
+    ]).then(([games, myRsvps, polls, myVotes, suggestions, requests]) => {
       if (!alive) return;
       const answered = new Set(((myRsvps.data ?? []) as { game_id: string }[]).map((r) => r.game_id));
       const voted = new Set(((myVotes.data ?? []) as { poll_id: string }[]).map((v) => v.poll_id));
@@ -241,18 +244,22 @@ function useNavBadges(me: string | undefined, isOrganizer: boolean, path: string
         (p) => !voted.has(p.id) && (!p.closes_at || new Date(p.closes_at) > now),
       ).length;
       const sug = suggestions.count ?? 0;
+      const req = requests.count ?? 0;
+      const reqBadge = req ? { n: req, label: `${req} pedido(s) de acesso esperando você` } : undefined;
       setBadges({
         "/agenda": noAnswer ? { n: noAnswer, label: `${noAnswer} jogo(s) esperando você dizer se vai` } : undefined,
         "/votacoes": noVote ? { n: noVote, label: `${noVote} votação(ões) esperando seu voto` } : undefined,
         "/sugestoes": sug
           ? { n: sug, label: isOrganizer ? `${sug} sugestão(ões) esperando aprovação` : `${sug} sugestão(ões) nova(s)` }
           : undefined,
+        "/pessoas": reqBadge,
+        "/perfil": reqBadge,
       });
     });
     return () => {
       alive = false;
     };
-  }, [me, isOrganizer, path, tick]);
+  }, [me, isOrganizer, isAdmin, path, tick]);
 
   return badges;
 }

@@ -2,12 +2,12 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Copy, Eye, FlaskConical, MessageCircle, Search, Trash2, UserPlus } from "lucide-react";
+import { Check, Copy, Eye, FlaskConical, Inbox, MessageCircle, Search, Trash2, UserPlus, X } from "lucide-react";
 import { startViewAs } from "@/lib/ver-como";
 import { supabase } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import { must, useLoad, useSession } from "@/components/session";
-import { Avatar, Badge, Button, Card, ConfirmDialog, ErrorState, FormField, HelpTip, Input, PageHeader, Select, Skeleton, Textarea, cx } from "@/components/ui";
+import { Avatar, Badge, Button, Card, ConfirmDialog, ErrorState, FormField, HelpTip, Input, PageHeader, Segmented, Select, Skeleton, Textarea, cx } from "@/components/ui";
 import { fromNow, isValidEmail, shareWhatsappUrl, whatsappUrl } from "@/lib/format";
 import { ROLE_HELP, ROLE_LABEL, type Invite, type Profile, type Role } from "@/lib/types";
 
@@ -15,6 +15,7 @@ export default function PessoasPage() {
   const { profile, isOrganizer, isAdmin, refresh } = useSession();
   const [q, setQ] = useState("");
   const [viewAs, setViewAs] = useState<Profile | null>(null);
+  const [testFilter, setTestFilter] = useState<"todos" | "reais" | "teste">("todos");
   const { data, error, loading, reload, setData } = useLoad(async () => {
     const sb = supabase();
     const [profiles, invites] = await Promise.all([
@@ -29,7 +30,11 @@ export default function PessoasPage() {
     [data],
   );
   const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
-  const people = (data?.profiles ?? []).filter((p) => !q || norm(`${p.name} ${p.email}`).includes(norm(q)));
+  const people = (data?.profiles ?? []).filter(
+    (p) =>
+      (!q || norm(`${p.name} ${p.email}`).includes(norm(q))) &&
+      (!isAdmin || testFilter === "todos" || (testFilter === "teste" ? p.is_test : !p.is_test)),
+  );
 
   async function changeRole(p: Profile, role: Role) {
     const prev = p.role;
@@ -108,10 +113,25 @@ export default function PessoasPage() {
                 <Input data-search aria-label="Buscar pessoa" placeholder="Buscar  ( / )" value={q} onChange={(e) => setQ(e.target.value)} className="min-h-10 pl-9" />
               </div>
             </div>
+            {isAdmin && data?.profiles.some((p) => p.is_test) && (
+              <Segmented
+                label="Mostrar"
+                size="sm"
+                value={testFilter}
+                onChange={setTestFilter}
+                options={[
+                  { value: "todos", label: "Todos" },
+                  { value: "reais", label: "Só reais" },
+                  { value: "teste", label: <><FlaskConical className="size-3.5" aria-hidden /> Só teste</> },
+                ]}
+              />
+            )}
             {loading && !data ? (
               Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16" />)
             ) : people.length === 0 ? (
-              <p className="text-muted">Ninguém encontrado com “{q}”.</p>
+              <p className="text-muted">
+                {q ? `Ninguém encontrado com “${q}”.` : testFilter === "teste" ? "Nenhuma pessoa de teste." : "Ninguém aqui."}
+              </p>
             ) : (
               <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
                 {people.map((p) => (
@@ -181,6 +201,7 @@ export default function PessoasPage() {
 
           {isOrganizer && (
             <aside className="flex flex-col gap-4">
+              {isAdmin && <AccessRequests onApproved={reload} />}
               <InviteForm
                 isAdmin={isAdmin}
                 existing={new Set([...(data?.invites.map((i) => i.email) ?? []), ...(data?.profiles.map((p) => p.email) ?? [])])}
@@ -321,6 +342,136 @@ function InviteForm({ isAdmin, existing, onInvited }: { isAdmin: boolean; existi
         onConfirm={() => submit()}
         onCancel={() => setConfirmRole(false)}
       />
+    </Card>
+  );
+}
+
+type AccessRequest = { id: string; email: string; name: string; phone: string | null; note: string | null; created_at: string };
+
+/** Pedidos vindos da página pública "Pedir acesso". Só o admin vê e decide. */
+function AccessRequests({ onApproved }: { onApproved: () => void }) {
+  const { data, error, setData } = useLoad(
+    async () =>
+      must(
+        await supabase().from("access_requests").select("id,email,name,phone,note,created_at").eq("status", "pendente").order("created_at"),
+      ) as AccessRequest[],
+    [],
+  );
+  const [busy, setBusy] = useState<string | null>(null);
+  const [approved, setApproved] = useState<AccessRequest | null>(null);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const link = `${origin}/pedir-acesso`;
+
+  async function decide(r: AccessRequest, approve: boolean, test = false) {
+    setBusy(r.id);
+    const { error } = await supabase().rpc("decide_access_request", { p_id: r.id, p_approve: approve, p_test: test });
+    setBusy(null);
+    if (error) return toast.error(friendlyError(error));
+    setData((list) => list?.filter((x) => x.id !== r.id) ?? list);
+    if (approve) {
+      setApproved(r);
+      onApproved();
+    } else toast(`Pedido de ${r.name} recusado.`);
+  }
+
+  const welcome = (r: AccessRequest) =>
+    `⚽ Oi, ${r.name.split(" ")[0]}! Seu acesso ao *Futebol da Missão* foi aprovado.\n\n1. Entre em ${origin}/login\n2. Toque em *Primeiro acesso*\n3. Use o email ${r.email} e crie uma senha`;
+
+  return (
+    <Card>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 font-semibold">
+          <Inbox className="size-5" aria-hidden /> Pedidos de acesso
+          {!!data?.length && <Badge tone="gold">{data.length}</Badge>}
+        </h2>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            navigator.clipboard.writeText(link);
+            toast.success("Link copiado. Mande no grupo.");
+          }}
+          title={link}
+        >
+          <Copy className="size-4" aria-hidden /> Copiar link
+        </Button>
+      </div>
+      <p className="mb-3 text-sm text-muted">Quem pediu pela página pública. Aprovar vira convite de jogador.</p>
+
+      {approved && (
+        <div className="mb-3 flex flex-col gap-2 rounded-xl bg-confirma-bg p-3 text-sm" role="status">
+          <p>
+            <strong className="text-confirma">✓ {approved.name} aprovado.</strong> Avise a pessoa:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {approved.phone ? (
+              <a
+                className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-confirma hover:bg-surface-2"
+                href={whatsappUrl(approved.phone, welcome(approved))!}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <MessageCircle className="size-4" aria-hidden /> Mandar no WhatsApp
+              </a>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(welcome(approved));
+                  toast.success("Mensagem copiada.");
+                }}
+              >
+                <Copy className="size-4" aria-hidden /> Copiar mensagem
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => setApproved(null)}>
+              Fechar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {error ? (
+        <p className="text-sm text-danger">{error}</p>
+      ) : !data ? (
+        <Skeleton className="h-16" />
+      ) : data.length === 0 ? (
+        <p className="text-sm text-muted">Nenhum pedido esperando.</p>
+      ) : (
+        <ul className="divide-y divide-line">
+          {data.map((r) => (
+            <li key={r.id} className="flex flex-col gap-2 py-3">
+              <div className="flex items-start gap-3">
+                <Avatar name={r.name} size={36} />
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">{r.name}</p>
+                  <p className="truncate text-sm text-muted">{r.email}</p>
+                  <p className="text-xs text-muted">
+                    {r.phone && (
+                      <a href={whatsappUrl(r.phone)!} target="_blank" rel="noopener noreferrer" className="text-confirma hover:underline">
+                        {r.phone}
+                      </a>
+                    )}
+                    {r.phone && " · "}pediu {fromNow(r.created_at)}
+                  </p>
+                  {r.note && <p className="mt-1 rounded-lg bg-surface-2 px-2.5 py-1.5 text-sm">“{r.note}”</p>}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 pl-12">
+                <Button size="sm" variant="primary" loading={busy === r.id} onClick={() => decide(r, true)}>
+                  <Check className="size-4" aria-hidden /> Aprovar
+                </Button>
+                <Button size="sm" variant="ghost" disabled={busy === r.id} onClick={() => decide(r, true, true)} title="Aprova como pessoa de teste: só você vê">
+                  <FlaskConical className="size-4" aria-hidden /> Aprovar como teste
+                </Button>
+                <Button size="sm" variant="ghost" disabled={busy === r.id} onClick={() => decide(r, false)}>
+                  <X className="size-4" aria-hidden /> Recusar
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </Card>
   );
 }

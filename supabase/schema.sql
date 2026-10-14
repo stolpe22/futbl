@@ -621,3 +621,69 @@ exception when duplicate_object then null; end $$;
 
 -- Faz a API enxergar as tabelas e funções novas na hora.
 notify pgrst, 'reload schema';
+
+-- ---------------------------------------------------------------------
+-- Pedidos de acesso: página pública onde a pessoa deixa nome e email.
+-- Ninguém de fora lê a tabela; só envia pelo request_access().
+-- O admin aprova (vira convite de jogador) ou recusa.
+-- ---------------------------------------------------------------------
+do $$ begin
+  create type public.request_status as enum ('pendente', 'aprovado', 'recusado');
+exception when duplicate_object then null; end $$;
+
+create table if not exists public.access_requests (
+  id          uuid primary key default gen_random_uuid(),
+  email       text not null check (email = lower(trim(email)) and email like '%_@_%._%' and length(email) <= 200),
+  name        text not null check (length(trim(name)) between 2 and 80),
+  phone       text check (phone is null or length(phone) <= 30),
+  note        text check (note is null or length(note) <= 300),
+  status      public.request_status not null default 'pendente',
+  decided_by  uuid references public.profiles(id) on delete set null,
+  decided_at  timestamptz,
+  created_at  timestamptz not null default now()
+);
+-- um pedido pendente por email: pedir de novo só atualiza
+create unique index if not exists access_requests_pending_uniq on public.access_requests (email) where status = 'pendente';
+
+alter table public.access_requests enable row level security;
+drop policy if exists access_requests_select on public.access_requests;
+create policy access_requests_select on public.access_requests for select to authenticated using (public.is_admin());
+
+-- Envia (ou atualiza) um pedido. Responde o que aconteceu, sem revelar dados de ninguém.
+create or replace function public.request_access(p_name text, p_email text, p_phone text default null, p_note text default null)
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  e text := lower(trim(p_email));
+begin
+  if e is null or e !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' or length(e) > 200 then return 'email_invalido'; end if;
+  if p_name is null or length(trim(p_name)) < 2 then return 'nome_invalido'; end if;
+  if exists (select 1 from public.invites where email = e) then return 'ja_convidado'; end if;
+  -- freio contra spam: no máximo 300 pedidos esperando
+  if (select count(*) from public.access_requests where status = 'pendente') >= 300 then return 'lotado'; end if;
+  insert into public.access_requests (email, name, phone, note)
+  values (e, left(trim(p_name), 80), nullif(left(trim(coalesce(p_phone, '')), 30), ''), nullif(left(trim(coalesce(p_note, '')), 300), ''))
+  on conflict (email) where status = 'pendente'
+  do update set name = excluded.name, phone = excluded.phone, note = excluded.note, created_at = now();
+  return 'ok';
+end $$;
+grant execute on function public.request_access(text, text, text, text) to anon, authenticated;
+
+-- Admin decide: aprovar cria o convite (jogador; pode marcar como teste)
+create or replace function public.decide_access_request(p_id uuid, p_approve boolean, p_test boolean default false)
+returns void language plpgsql security definer set search_path = public as $$
+declare r public.access_requests;
+begin
+  if not public.is_admin() then raise exception 'Só o admin pode aprovar pedidos de acesso'; end if;
+  select * into r from public.access_requests where id = p_id and status = 'pendente' for update;
+  if not found then raise exception 'Esse pedido já foi decidido'; end if;
+  if p_approve then
+    insert into public.invites (email, role, name, invited_by, is_test)
+    values (r.email, 'jogador', r.name, auth.uid(), coalesce(p_test, false))
+    on conflict (email) do nothing;
+  end if;
+  update public.access_requests
+     set status = case when p_approve then 'aprovado'::public.request_status else 'recusado'::public.request_status end,
+         decided_by = auth.uid(), decided_at = now()
+   where id = p_id;
+end $$;
+grant execute on function public.decide_access_request(uuid, boolean, boolean) to authenticated;

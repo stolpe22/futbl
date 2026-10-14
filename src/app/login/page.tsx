@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, MailCheck } from "lucide-react";
@@ -54,7 +55,12 @@ export default function LoginPage() {
               </Suspense>
             </div>
           </div>
-          <p className="mt-4 text-center text-sm text-[#979083]">Acesso só para quem foi convidado pelo grupo.</p>
+          <p className="mt-4 text-center text-sm text-[#979083]">
+            Acesso só para convidados.{" "}
+            <Link href="/pedir-acesso" className="font-semibold text-[#fdb72d] underline-offset-4 hover:underline">
+              Ainda não tem? Peça acesso
+            </Link>
+          </p>
         </main>
       </div>
       <LedTicker />
@@ -119,7 +125,7 @@ function LoginForms() {
     const { data, error } = await supabase().rpc("is_email_invited", { p_email: email.trim() });
     if (error) return true; // não bloqueia se a checagem falhar; o servidor valida de novo
     if (!data) {
-      fail("Esse email não está na lista do grupo. Peça para um organizador te cadastrar e tente de novo.");
+      fail("Esse email não está na lista do grupo. Peça acesso no link abaixo do formulário, ou fale com um organizador.");
       return false;
     }
     return true;
