@@ -217,7 +217,7 @@ export default function AjudaPage() {
   return (
     <>
       <PageHeader title="Ajuda" subtitle="Respostas rápidas para as dúvidas mais comuns." />
-      <div className="grid gap-8 lg:grid-cols-[1.5fr_1fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-6">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />

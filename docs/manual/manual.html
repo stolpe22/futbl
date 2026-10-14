@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Futebol da Missão · Manual rápido</title>
+<!--
+  Fonte do manual. Edite este arquivo e gere o PDF com:  npm run manual
+  (sai em docs/manual-futebol-da-missao.pdf). Dá para abrir direto no navegador para ver como fica.
+-->
+<style>
+  @page { size: A4; margin: 0; }
+  :root {
+    --ink: #1a160e; --cream: #faf7f0; --gold: #fdb72d; --gold-ink: #9a6700; --gold-bg: #fdf3dc;
+    --muted: #6e6656; --line: #e6dfcd; --green: #067647; --green-bg: #e3f6ec; --red: #b42318; --red-bg: #fdecea;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; color: var(--ink); background: var(--cream); font-size: 10.3pt; line-height: 1.42; }
+  /* Cada .page é uma folha A4. Se o conteúdo não couber, crie outra <div class="page">. */
+  .page { width: 210mm; height: 297mm; padding: 13mm 14mm 11mm; position: relative; overflow: hidden; break-after: page; display: flex; flex-direction: column; }
+  .page:last-child { break-after: auto; }
+  @media screen { body { background: #d9d4c7; padding: 24px 0; } .page { margin: 0 auto 24px; background: var(--cream); box-shadow: 0 4px 20px rgb(0 0 0 / .15); } }
+
+  header { display: flex; align-items: center; gap: 14px; background: var(--ink); color: #f7f4ec; border-radius: 16px; padding: 14px 18px; }
+  header img { width: 56px; height: 56px; flex: none; }
+  header h1 { font-size: 21pt; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+  header .kicker { color: var(--gold); font-size: 8.5pt; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; margin-top: 4px; }
+  header .tag { margin-left: auto; text-align: right; color: #c9c3b5; font-size: 9.5pt; max-width: 66mm; }
+
+  section { break-inside: avoid; }
+  h2 { font-size: 12.5pt; font-weight: 800; margin: 14px 0 7px; display: flex; align-items: center; gap: 8px; }
+  h2 .n { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 99px; background: var(--gold); font-size: 10pt; flex: none; }
+  p + p { margin-top: 5px; }
+  b, strong { font-weight: 700; }
+  .muted { color: var(--muted); }
+  ul { padding-left: 16px; } li { margin: 2px 0; }
+
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; }
+  .card .t { display: block; font-weight: 700; font-size: 10.8pt; margin-bottom: 2px; }
+  .card.gold { border-color: var(--gold); }
+  .card.dark { background: var(--ink); color: #f7f4ec; border-color: var(--ink); }
+  .card.dark .muted { color: #c9c3b5; }
+
+  .flow { display: grid; grid-template-columns: 1fr 16px 1fr 16px 1fr; align-items: stretch; }
+  .arrow { display: grid; place-items: center; color: var(--gold-ink); font-weight: 800; font-size: 14pt; }
+  .who { display: inline-block; font-size: 7.8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--gold-ink); background: var(--gold-bg); border-radius: 6px; padding: 1px 6px; margin-bottom: 4px; }
+  .card.dark .who { background: var(--gold); color: var(--ink); }
+
+  .note { margin-top: 8px; font-size: 9.6pt; background: var(--gold-bg); border-radius: 10px; padding: 8px 11px; }
+  .pill { display: inline-block; border-radius: 99px; padding: 0 8px; font-weight: 700; font-size: 9pt; }
+  .vou { background: var(--green-bg); color: var(--green); } .tal { background: var(--gold-bg); color: var(--gold-ink); } .nao { background: var(--red-bg); color: var(--red); }
+
+  /* Antes e depois do WhatsApp */
+  .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .vs .card { display: flex; flex-direction: column; gap: 5px; }
+  .bad .t { color: var(--red); } .good .t { color: var(--green); }
+  .bubble { background: #dcf8c6; border-radius: 10px 10px 10px 2px; padding: 6px 9px; font-size: 9pt; line-height: 1.38; white-space: pre-line; color: #111; }
+  .bubble.gray { background: #f0ede4; }
+
+  .steps { counter-reset: s; list-style: none; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .steps li { counter-increment: s; display: flex; gap: 8px; align-items: baseline; }
+  .steps li::before { content: counter(s); flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 99px; background: var(--ink); color: var(--gold); font-size: 8.5pt; font-weight: 800; }
+  .url { font-family: Consolas, monospace; font-size: 9pt; background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 0 5px; }
+
+  footer { margin-top: auto; display: flex; justify-content: space-between; font-size: 8.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; }
+</style>
+</head>
+<body>
+
+<!-- ======================= PÁGINA 1 ======================= -->
+<div class="page">
+
+<header>
+  <img src="../../src/app/icon.svg" alt="">
+  <div>
+    <h1>Futebol da Missão</h1>
+    <p class="kicker">Manual rápido · Goiânia</p>
+  </div>
+  <p class="tag">Agenda, campos, votações e presença do futebol do grupo, num lugar só.</p>
+</header>
+
+<section>
+  <h2><span class="n">1</span> Para que serve</h2>
+  <p>Organizar o futebol <b>sem bagunça no grupo do WhatsApp</b>. Em vez de mandar “quinta tem jogo? onde? quanto?” solto e perder a conta no meio das mensagens, você cria tudo aqui (campo, horário, valor, votação) e manda o link pronto no grupo. Cada um responde no app, e a lista, o placar da votação e o valor por pessoa se atualizam sozinhos.</p>
+</section>
+
+<section>
+  <h2><span class="n">2</span> Quem é quem</h2>
+  <div class="grid3">
+    <div class="card"><span class="t">Jogador</span>Diz se vai nos jogos, vota, <b>sugere</b> jogos e campos e dá +1 nas sugestões dos outros.</div>
+    <div class="card gold"><span class="t">Organizador</span>Tudo do jogador, e mais: <b>marca jogo oficial</b>, aprova ou recusa sugestões, abre votações, convida e <b>aprova pedidos de acesso</b>.</div>
+    <div class="card"><span class="t">Admin</span>Tudo do organizador, e mais: muda o papel das pessoas, cuida dos campos e acompanha o uso do sistema.</div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">3</span> Como uma ideia vira jogo</h2>
+  <div class="flow">
+    <div class="card"><span class="who">Qualquer um</span><span class="t">Sugestão</span><span class="muted">“Quero jogar no campo X, quinta 20h.” Quem também quer dá <b>+1</b>. Sugestão igual vira +1 automático.</span></div>
+    <div class="arrow">→</div>
+    <div class="card"><span class="who">Organizador · se precisar</span><span class="t">Votação</span><span class="muted">Quando há dúvida entre campos ou horários. Cada um marca o que pode, e o vencedor vira jogo com um toque.</span></div>
+    <div class="arrow">→</div>
+    <div class="card dark"><span class="who">Organizador marca</span><span class="t">Jogo oficial</span><span class="muted">Vai para a <b style="color:var(--gold)">Agenda</b> e cada um diz se vai.</span></div>
+  </div>
+  <p class="note"><b>Só o organizador cria o jogo oficial</b>: aprovando uma sugestão, a partir do resultado de uma votação ou marcando direto (pode pular sugestão e votação). Sugestão pendente <b>não</b> aparece na Agenda.</p>
+</section>
+
+<div class="grid2">
+  <section>
+    <h2><span class="n">4</span> Confirmar presença</h2>
+    <ul>
+      <li>No jogo, toque em <span class="pill vou">Vou</span> <span class="pill tal">Talvez</span> ou <span class="pill nao">Não vou</span>. Dá para trocar quando quiser.</li>
+      <li>Jogo com limite de vagas: quem confirma depois de lotar fica na <b>lista de espera</b>, por ordem de chegada.</li>
+      <li>Ninguém confirma <b>Vou</b> em dois jogos no mesmo horário.</li>
+      <li>O <b>+1</b> numa sugestão não confirma presença: depois de aprovada, cada um marca se vai.</li>
+    </ul>
+  </section>
+  <section>
+    <h2><span class="n">5</span> Quanto cada um paga</h2>
+    <ul>
+      <li>Total = <b>valor da hora do campo × duração</b> (ou o valor que o organizador digitar).</li>
+      <li>Dividido entre os confirmados. Quem está na lista de espera não paga.</li>
+      <li>O valor por pessoa atualiza sozinho e aparece no jogo, na Agenda e na mensagem do WhatsApp.</li>
+    </ul>
+  </section>
+</div>
+
+<footer><span>Futebol da Missão · MBL / Missão Goiânia</span><span>Continua na próxima página →</span></footer>
+</div>
+
+<!-- ======================= PÁGINA 2 ======================= -->
+<div class="page">
+
+<section>
+  <h2 style="margin-top:0"><span class="n">6</span> Organizou? Manda o link, não o texto solto</h2>
+  <div class="vs">
+    <div class="card bad">
+      <span class="t">✗ Do jeito antigo</span>
+      <div class="bubble gray">quinta tem fut?</div>
+      <div class="bubble gray">onde? quanto tá?</div>
+      <div class="bubble gray">eu vou · eu tbm · quem confirmou mesmo?? · quanto fica pra cada?</div>
+    </div>
+    <div class="card good">
+      <span class="t">✓ Com o app</span>
+      <div class="bubble">⚽ *Futebol de quinta*
+🗓️ quinta, 16 de outubro às 20:00
+📍 Arena Missão
+✅ 10 confirmados de 14
+💰 R$ 300,00 · R$ 30,00 cada
+Confirme aqui: futebol…/agenda/…</div>
+    </div>
+  </div>
+  <p style="margin-top:8px">Os botões <b>“Mandar no WhatsApp”</b> montam a mensagem sozinhos. É só escolher o grupo:</p>
+  <div class="grid3" style="margin-top:6px">
+    <div class="card"><span class="t">Jogo</span>Data, hora, campo, quantos confirmaram e o valor por pessoa, com o link para confirmar.</div>
+    <div class="card"><span class="t">Votação</span>A pergunta e todas as opções, com o link para votar.</div>
+    <div class="card"><span class="t">Sugestão</span>Campo, horário, valor estimado e quantos já querem, com o link para dar +1.</div>
+  </div>
+  <p class="note">O link aparece no WhatsApp com a <b>imagem do Futebol da Missão</b>. Quem toca cai direto no jogo, na votação ou na sugestão (se ainda não entrou, faz login antes).</p>
+</section>
+
+<section>
+  <h2><span class="n">7</span> Como entrar no sistema</h2>
+  <div class="grid2">
+    <div class="card">
+      <span class="t">Quem ainda não tem acesso</span>
+      <ol class="steps">
+        <li><span>Abra a página <span class="url">/pedir-acesso</span> (ou toque em “Peça acesso” na tela de login).</span></li>
+        <li><span>Preencha nome, email e WhatsApp. Leva 30 segundos.</span></li>
+        <li><span>Um organizador aprova e te avisa pelo WhatsApp.</span></li>
+        <li><span>No login, toque em <b>Primeiro acesso</b>, use o mesmo email e crie sua senha.</span></li>
+      </ol>
+      <p class="muted" style="margin-top:6px">Não precisa mandar seu email no grupo: o pedido chega direto para a organização.</p>
+    </div>
+    <div class="card gold">
+      <span class="t">Organizador: aprovar pedidos</span>
+      <ul>
+        <li>Os pedidos ficam em <b>Pessoas → Pedidos de acesso</b>. A bolinha dourada no menu mostra quantos estão esperando.</li>
+        <li><b>Aprovar</b> já cria o convite. Em seguida, o botão “Mandar no WhatsApp” abre a conversa com a pessoa e as instruções prontas.</li>
+        <li><b>Copiar link</b> pega o endereço da página de pedido para mandar no grupo.</li>
+        <li>O <b>histórico</b> registra quem aprovou ou recusou cada pedido, e quando.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">8</span> Dicas</h2>
+  <div class="grid2">
+    <ul>
+      <li><b>Bolinha dourada no menu</b> = algo esperando você: jogo sem resposta, votação sem voto, sugestão para decidir ou pedido de acesso.</li>
+      <li><b>Campo novo?</b> Cadastre com preço por hora, endereço e WhatsApp do dono: o valor do jogo sai sozinho.</li>
+    </ul>
+    <ul>
+      <li><b>Jogo toda semana?</b> Ao marcar, use o campo <b>Repetir</b>: cria os jogos das próximas semanas de uma vez.</li>
+      <li><b>Atalho no celular:</b> no navegador, “Adicionar à tela inicial”. Fica um ícone da onça.</li>
+      <li>Dúvidas? Abra a <b>Ajuda</b> (ícone ?) no app.</li>
+    </ul>
+  </div>
+</section>
+
+<footer><span>Futebol da Missão · MBL / Missão Goiânia</span><span>Mais detalhes na tela Ajuda do app</span></footer>
+</div>
+
+</body>
+</html>

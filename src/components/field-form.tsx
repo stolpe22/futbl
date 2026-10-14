@@ -275,7 +275,7 @@ export function FieldForm({
   }
 
   return (
-    <form id="field-form" onSubmit={submit} noValidate className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
+    <form id="field-form" onSubmit={submit} noValidate className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       {/* ---------------- Onde fica ---------------- */}
       <section id="local" className="flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start" aria-labelledby="local-title">
         <div>
@@ -451,7 +451,7 @@ export function FieldForm({
           <FormField label="Endereço" htmlFor="f-address" optional hint="Preenchemos sozinho quando você marca no mapa.">
             <Input id="f-address" value={v.address} onChange={(e) => set("address", e.target.value)} />
           </FormField>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
             <FormField label="Tipo de piso" htmlFor="f-surface">
               <Select id="f-surface" value={v.surface} onChange={(e) => set("surface", e.target.value as Surface)}>
                 {Object.entries(SURFACE_LABEL).map(([k, l]) => (
@@ -480,7 +480,7 @@ export function FieldForm({
           <FormField label="Telefone / WhatsApp" htmlFor="f-phone" optional error={errors.phone} hint="Vira um botão de WhatsApp na página do campo.">
             <Input id="f-phone" type="tel" inputMode="tel" placeholder="(62) 99999-0000" value={v.phone} onChange={(e) => set("phone", phoneMask(e.target.value))} aria-invalid={!!errors.phone} />
           </FormField>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
             <FormField label="Instagram" htmlFor="f-instagram" optional hint="Pode ser @perfil ou o link.">
               <Input id="f-instagram" placeholder="@arenasociety" value={v.instagram} onChange={(e) => set("instagram", e.target.value)} />
             </FormField>

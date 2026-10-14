@@ -321,7 +321,7 @@ function FieldPicker({ fields, selected, min, onChange }: { fields: FieldRow[]; 
   const names = fields.map((f) => normName(f.name));
   const repeated = new Set(names.filter((n, i) => names.indexOf(n) !== i));
   return (
-    <ul className="grid gap-2 sm:grid-cols-2">
+    <ul className="grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2">
       {fields.map((f) => {
         const on = selected.includes(f.id);
         const twin = !on && selected.some((id) => normName(fields.find((x) => x.id === id)?.name ?? "") === normName(f.name));

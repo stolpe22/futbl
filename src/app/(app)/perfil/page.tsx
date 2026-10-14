@@ -73,7 +73,7 @@ export default function PerfilPage() {
   return (
     <>
       <PageHeader title="Meu perfil" />
-      <div className="grid max-w-4xl gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] max-w-4xl gap-6 md:grid-cols-2">
         <div className="flex flex-col gap-4">
           <Card className="flex items-center gap-4">
             <Avatar name={profile.name || profile.email} size={56} />

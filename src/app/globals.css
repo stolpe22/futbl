@@ -97,6 +97,8 @@ body {
 body {
   font-family: var(--font-bricolage), "Helvetica Neue", Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* email, link ou nome comprido quebra a linha em vez de alargar a tela */
+  overflow-wrap: break-word;
 }
 
 :focus-visible {

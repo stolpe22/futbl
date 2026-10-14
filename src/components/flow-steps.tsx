@@ -69,7 +69,7 @@ export function FlowSteps({ current }: { current: (typeof STEPS)[number]["id"] }
         <X className="size-4" />
       </button>
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Como uma ideia vira jogo</h2>
-      <ol className="grid gap-3 sm:grid-cols-3">
+      <ol className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-3">
         {STEPS.map((s) => (
           <li key={s.id}>
             <Link

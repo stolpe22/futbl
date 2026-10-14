@@ -66,7 +66,7 @@ export default function InicioPage() {
         data.pendingSuggestions > 0 && (
           <Link href="/sugestoes" className="flex items-center gap-3 rounded-2xl border border-gold/60 bg-talvez-bg/60 p-4 hover:border-gold">
             <Lightbulb className="size-6 shrink-0 text-gold-ink" aria-hidden />
-            <span className="flex-1">
+            <span className="min-w-0 flex-1">
               <strong>{data.pendingSuggestions} {data.pendingSuggestions === 1 ? "sugestão espera" : "sugestões esperam"} sua aprovação.</strong>
               <span className="block text-sm text-muted">Veja quais campos e horários a galera mais quer.</span>
             </span>
@@ -76,7 +76,7 @@ export default function InicioPage() {
       ) : (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface p-4">
           <Lightbulb className="size-6 shrink-0 text-gold-ink" aria-hidden />
-          <span className="min-w-48 flex-1">
+          <span className="min-w-0 flex-[1_1_12rem]">
             <strong>Tem um campo ou horário bom?</strong>
             <span className="block text-sm text-muted">Sugira. Quem também quer dá +1, e um organizador aprova.</span>
           </span>
@@ -98,7 +98,7 @@ export default function InicioPage() {
         </Card>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <section aria-labelledby="proximo" className="flex flex-col gap-3">
           <div className="flex items-baseline justify-between">
             <h2 id="proximo" className="text-xl font-bold">Próximos jogos</h2>

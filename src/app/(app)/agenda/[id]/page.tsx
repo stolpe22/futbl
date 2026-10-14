@@ -161,7 +161,7 @@ export default function JogoPage() {
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div className="flex flex-col gap-4">
           {!cancelled && !past && (
             <Card className="border-gold/60">

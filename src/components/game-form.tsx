@@ -118,7 +118,7 @@ export function GameForm({
         <FormField label="Nome do jogo" htmlFor="g-title" error={errors.title}>
           <Input id="g-title" value={title} onChange={(e) => touch(setTitle)(e.target.value)} aria-invalid={!!errors.title} />
         </FormField>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-3">
           <FormField label="Dia" htmlFor="g-date" error={errors.date}>
             <Input id="g-date" type="date" value={date} onChange={(e) => touch(setDate)(e.target.value)} aria-invalid={!!errors.date} />
           </FormField>
@@ -189,7 +189,7 @@ export function GameForm({
             ))}
           </Select>
         </FormField>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
           <FormField label="Máximo de jogadores" htmlFor="g-max" optional error={errors.maxPlayers} hint="Ex.: 14 para dois times de 7.">
             <Input id="g-max" inputMode="numeric" value={maxPlayers} onChange={(e) => touch(setMaxPlayers)(e.target.value.replace(/\D/g, ""))} aria-invalid={!!errors.maxPlayers} />
           </FormField>

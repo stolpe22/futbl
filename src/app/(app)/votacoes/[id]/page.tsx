@@ -338,7 +338,7 @@ export default function VotacaoPage() {
       )}
       <Summary rows={summary} open={open} voters={voters.size} />
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">
           <p className="text-sm text-muted" role="status">{status}</p>
 
@@ -694,7 +694,7 @@ function Summary({ rows, open, voters }: { rows: SummaryRow[]; open: boolean; vo
       {voters === 0 ? (
         <p className="mt-1 text-sm text-muted">Ninguém votou ainda. Seja o primeiro.</p>
       ) : (
-        <dl className="mt-3 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+        <dl className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-x-6 gap-y-3 sm:grid-cols-2">
           {rows.map((r) => (
             <div key={r.title} className="min-w-0">
               <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{r.title}</dt>

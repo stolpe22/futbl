@@ -235,7 +235,7 @@ export default function CamposPage() {
       {error ? (
         <ErrorState message={error} onRetry={reload} />
       ) : (
-        <div className="grid gap-4 md:grid-cols-[minmax(300px,360px)_1fr] lg:grid-cols-[400px_1fr]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[minmax(300px,360px)_minmax(0,1fr)] lg:grid-cols-[400px_minmax(0,1fr)]">
           {/* Mapa: em cima no celular, à direita no computador */}
           <div className="min-w-0 md:order-2">
             <FieldsMap

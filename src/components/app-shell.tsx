@@ -65,7 +65,7 @@ function Shell({ children }: { children: ReactNode }) {
     );
 
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="flex min-h-dvh flex-col overflow-x-clip">
       <a href="#conteudo" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-gold focus:px-3 focus:py-2 focus:text-[#1a160e]">
         Pular para o conteúdo
       </a>
@@ -125,7 +125,7 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main id="conteudo" className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-6 md:pb-12">
+      <main id="conteudo" className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 pb-28 pt-6 md:pb-12">
         {body}
       </main>
 

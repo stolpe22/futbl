@@ -39,7 +39,7 @@ export default function AdminPage() {
   return (
     <>
       <PageHeader title="Painel" subtitle="Uso do Google e limpeza de campos. Só o admin vê esta tela." />
-      <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <GoogleUsage />
         <FieldsCleanup />
       </div>

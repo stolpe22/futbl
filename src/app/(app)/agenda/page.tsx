@@ -111,7 +111,7 @@ function CalendarView({ onSuggest }: { onSuggest: (date: string) => void }) {
   };
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_380px]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
       <section aria-label="Calendário" className="rounded-2xl border border-line bg-surface p-3 sm:p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <h2 className="text-xl font-bold capitalize" aria-live="polite">

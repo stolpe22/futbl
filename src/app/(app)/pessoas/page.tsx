@@ -104,7 +104,7 @@ export default function PessoasPage() {
       {error ? (
         <ErrorState message={error} onRetry={reload} />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
           <section className="flex flex-col gap-3" aria-labelledby="membros">
             <div className="flex items-center justify-between gap-3">
               <h2 id="membros" className="text-xl font-bold">Membros</h2>

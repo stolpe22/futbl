@@ -74,7 +74,7 @@ export function RsvpButtons({
               set(s);
             }}
             className={cx(
-              "inline-flex items-center justify-center gap-1.5 rounded-xl border font-semibold transition-colors disabled:opacity-60",
+              "inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border px-1 font-semibold whitespace-nowrap transition-colors disabled:opacity-60",
               size === "lg" ? "min-h-14 text-base" : "min-h-10 text-sm",
               on ? STYLE[s].on : "border-line bg-surface text-ink hover:bg-surface-2",
             )}

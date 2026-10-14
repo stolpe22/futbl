@@ -98,7 +98,7 @@ export default function CampoPage() {
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <FieldsMap className="h-[360px] lg:h-[480px]" fields={[field]} selectedId={field.id} focus={{ lat: field.lat, lng: field.lng, zoom: 16 }} />
 
         <div className="flex flex-col gap-4">

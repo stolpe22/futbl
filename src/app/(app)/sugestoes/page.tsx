@@ -4,14 +4,14 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CalendarCheck, CalendarDays, Check, MapPin, Plus, ThumbsUp, Trophy, X } from "lucide-react";
+import { CalendarCheck, CalendarDays, Check, MapPin, Plus, Share2, ThumbsUp, Trophy, X } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import { must, useLoad, useSession } from "@/components/session";
 import { SuggestDialog } from "@/components/suggest-dialog";
 import { FlowSteps } from "@/components/flow-steps";
-import { Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, ErrorState, HelpTip, PageHeader, Segmented, Skeleton } from "@/components/ui";
-import { brl, dateTimeShort, fromNow } from "@/lib/format";
+import { Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, ErrorState, HelpTip, LinkButton, PageHeader, Segmented, Skeleton } from "@/components/ui";
+import { brl, dateTimeShort, fromNow, shareWhatsappUrl } from "@/lib/format";
 import type { FieldRow, Profile, Suggestion, SuggestionSupport } from "@/lib/types";
 
 type Data = {
@@ -173,7 +173,7 @@ export default function SugestoesPage() {
       {error ? (
         <ErrorState message={error} onRetry={reload} />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <section className="flex min-w-0 flex-col gap-3" aria-label="Sugestões">
             <Segmented
               label="Quais sugestões"
@@ -200,8 +200,17 @@ export default function SugestoesPage() {
                   const sup = supportersOf(s.id);
                   const mine = sup.some((x) => x.user_id === me);
                   const f = fieldOf(s.field_id);
+                  const shareText = [
+                    s.starts_at ? `⚽ *Bora jogar?* ${dateTimeShort(s.starts_at)} · ${s.duration_min} min` : "⚽ *Bora jogar nesse campo?*",
+                    `📍 ${f?.name ?? "Campo"}${f?.address ? ` (${f.address})` : ""}`,
+                    ...(f?.price_per_hour != null ? [`💰 ${brl((f.price_per_hour * s.duration_min) / 60)} no total, dividido entre quem for`] : []),
+                    ...(s.note ? [`💬 ${s.note}`] : []),
+                    `👍 ${sup.length} ${sup.length === 1 ? "pessoa quer" : "pessoas querem"}`,
+                    "",
+                    `Dá seu +1 aqui: ${typeof window !== "undefined" ? `${window.location.origin}/sugestoes#s-${s.id}` : ""}`,
+                  ].join("\n");
                   return (
-                    <Card key={s.id} className="flex flex-col gap-3">
+                    <Card key={s.id} id={`s-${s.id}`} className="flex scroll-mt-24 flex-col gap-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
@@ -244,6 +253,9 @@ export default function SugestoesPage() {
                             </Button>
                           </>
                         )}
+                        <LinkButton size="sm" href={shareWhatsappUrl(shareText)} external title="Chamar a galera para dar +1">
+                          <Share2 className="size-4" aria-hidden /> WhatsApp
+                        </LinkButton>
                         {!isOrganizer && s.created_by === me && (
                           <Button size="sm" variant="ghost" onClick={() => withdraw(s)}>Retirar minha sugestão</Button>
                         )}

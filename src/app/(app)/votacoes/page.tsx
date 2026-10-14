@@ -41,7 +41,7 @@ export default function VotacoesPage() {
       {error ? (
         <ErrorState message={error} onRetry={reload} />
       ) : loading && !data ? (
-        <div className="grid gap-3 sm:grid-cols-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}</div>
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}</div>
       ) : data!.polls.length === 0 ? (
         <EmptyState
           icon="🗳️"
@@ -86,7 +86,7 @@ function Section({
       {polls.length === 0 ? (
         <p className="text-muted">{empty}</p>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
           {polls.map((p) => {
             const pv = votes.filter((v) => v.poll_id === p.id);
             const voters = new Set(pv.map((v) => v.user_id)).size;
