@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { CalendarDays, Eye, Gauge, HelpCircle, Home, Lightbulb, Map, UserRound, Users, Vote } from "lucide-react";
+import { CalendarDays, Eye, Gauge, HelpCircle, Home, Lightbulb, LogOut, Map, UserRound, Users, Vote } from "lucide-react";
 import { SessionProvider, useSession } from "./session";
 import { Avatar, Button, Dialog, ErrorState, Kbd, Spinner, cx } from "./ui";
 import { supabase } from "@/lib/supabase/client";
@@ -50,19 +50,23 @@ function Shell({ children }: { children: ReactNode }) {
   const badges = useNavBadges(profile?.id, isOrganizer, isAdmin, path);
   useShortcuts(() => setHelpOpen(true));
 
+  // Telas que travam o app: sempre deixam sair da conta (o menu e o Perfil ficam inacessíveis)
+  const blocked = (message: string, onRetry?: () => void) => (
+    <div className="flex max-w-xl flex-col gap-3">
+      <ErrorState message={message} onRetry={onRetry} />
+      <Button onClick={signOut} className="self-start">
+        <LogOut className="size-4" aria-hidden /> Sair da conta
+      </Button>
+    </div>
+  );
+
   let body: ReactNode = children;
   if (loading) body = <Spinner label="Entrando…" />;
-  else if (error) body = <ErrorState message={error} onRetry={refresh} />;
-  else if (!profile || !profile.active)
-    body = (
-      <ErrorState
-        message={
-          !profile
-            ? "Sua conta existe, mas o perfil não foi criado. Peça para o admin conferir se o banco foi configurado (supabase/schema.sql)."
-            : "Seu acesso foi desativado por um administrador. Fale com ele se achar que é engano."
-        }
-      />
-    );
+  else if (error) body = blocked(error, refresh);
+  else if (!profile)
+    body = blocked("Sua conta existe, mas o perfil não foi criado. Peça para o admin conferir se o banco foi configurado (supabase/schema.sql).");
+  else if (!profile.active)
+    body = blocked("Seu acesso foi desativado por um administrador. Fale com a organização se achar que é engano.");
 
   return (
     <div className="flex min-h-dvh flex-col overflow-x-clip">
