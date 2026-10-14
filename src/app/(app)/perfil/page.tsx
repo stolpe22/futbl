@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { ChevronRight, HelpCircle, LogOut, Monitor, Moon, Sun, Users } from "lucide-react";
+import { ChevronRight, Gauge, HelpCircle, LogOut, Monitor, Moon, Sun, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import { useSession } from "@/components/session";
 import { signOut } from "@/components/app-shell";
-import { QuotaCard } from "@/components/quota-card";
 import { Avatar, Badge, Button, Card, FormField, Input, PageHeader, Segmented } from "@/components/ui";
 import { phoneMask } from "@/lib/format";
 import { ROLE_HELP, ROLE_LABEL } from "@/lib/types";
@@ -118,7 +117,16 @@ export default function PerfilPage() {
             <p className="mt-2 text-sm text-muted">Automático segue o tema do seu celular ou computador.</p>
           </Card>
 
-          {isAdmin && <QuotaCard />}
+          {isAdmin && (
+            <Link href="/admin" className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 hover:border-ink/40">
+              <Gauge className="size-5 text-gold-ink" aria-hidden />
+              <span>
+                <span className="block font-semibold">Painel do admin</span>
+                <span className="block text-sm text-muted">Uso do Google e limpeza de campos</span>
+              </span>
+              <ChevronRight className="ml-auto size-4 text-muted" aria-hidden />
+            </Link>
+          )}
 
           <Card>
             <form onSubmit={savePassword} className="flex flex-col gap-4" noValidate>

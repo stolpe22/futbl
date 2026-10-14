@@ -67,7 +67,7 @@ const TICKER = ["Vou ✓", "Quinta 20h", "Campo escolhido", "+1", "Lista fechada
 export function LedTicker() {
   const items = [...TICKER, ...TICKER];
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 overflow-hidden border-t border-[#fdb72d]/20 bg-black/40 py-2.5 backdrop-blur-sm" aria-hidden>
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 overflow-hidden border-t border-[#fdb72d]/20 bg-black/70 py-2.5 lg:bg-black/40 lg:backdrop-blur-sm" aria-hidden>
       <div className="lg-ticker">
         {[0, 1].map((half) => (
           <div key={half} className="flex shrink-0">

@@ -359,6 +359,23 @@ drop policy if exists fields_delete on public.fields;
 create policy fields_delete on public.fields for delete to authenticated
   using (public.is_organizer() or created_by = auth.uid());
 
+-- Campo com jogo marcado (passado ou futuro, não cancelado) não pode ser apagado:
+-- o jogo perderia o lugar. Cancele o jogo ou troque o campo dele antes.
+create or replace function public.guard_field_delete()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+  select count(*) into n from public.games where field_id = old.id and status <> 'cancelado';
+  if n > 0 then
+    raise exception 'CAMPO_COM_JOGO: %', n using errcode = 'P0001';
+  end if;
+  return old;
+end $$;
+
+drop trigger if exists guard_field_delete on public.fields;
+create trigger guard_field_delete before delete on public.fields
+  for each row execute function public.guard_field_delete();
+
 -- games: membro vê; organizador gerencia
 drop policy if exists games_select on public.games;
 create policy games_select on public.games for select to authenticated using (public.is_member());

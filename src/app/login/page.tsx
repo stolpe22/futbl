@@ -48,7 +48,7 @@ export default function LoginPage() {
         </header>
         <main className="lg-rise" style={{ "--d": "0.5s" } as React.CSSProperties}>
           <div className="lg-ring">
-            <div className="rounded-[calc(1.75rem-1.5px)] bg-surface/95 p-6 text-ink backdrop-blur-xl sm:p-8">
+            <div className="rounded-[calc(1.75rem-1.5px)] bg-surface p-6 text-ink sm:p-8 lg:bg-surface/95 lg:backdrop-blur-xl">
               <Suspense>
                 <LoginForms />
               </Suspense>

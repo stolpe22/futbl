@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { CalendarDays, Eye, HelpCircle, Home, Lightbulb, Map, UserRound, Users, Vote } from "lucide-react";
+import { CalendarDays, Eye, Gauge, HelpCircle, Home, Lightbulb, Map, UserRound, Users, Vote } from "lucide-react";
 import { SessionProvider, useSession } from "./session";
 import { Avatar, Button, Dialog, ErrorState, Kbd, Spinner, cx } from "./ui";
 import { supabase } from "@/lib/supabase/client";
@@ -45,7 +45,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
-  const { profile, loading, error, refresh, isOrganizer } = useSession();
+  const { profile, loading, error, refresh, isOrganizer, isAdmin } = useSession();
   const [helpOpen, setHelpOpen] = useState(false);
   const badges = useNavBadges(profile?.id, isOrganizer, path);
   useShortcuts(() => setHelpOpen(true));
@@ -94,6 +94,16 @@ function Shell({ children }: { children: ReactNode }) {
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-1">
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={cx("grid size-10 place-items-center rounded-lg hover:bg-surface-2", isActive(path, "/admin") ? "text-ink" : "text-muted")}
+                title="Painel do admin"
+                aria-label="Painel do admin"
+              >
+                <Gauge className="size-5" />
+              </Link>
+            )}
             <Link
               href="/ajuda"
               className={cx("grid size-10 place-items-center rounded-lg hover:bg-surface-2", isActive(path, "/ajuda") ? "text-ink" : "text-muted")}
@@ -123,7 +133,7 @@ function Shell({ children }: { children: ReactNode }) {
       <nav aria-label="Principal" className="fixed inset-x-0 bottom-0 z-[1000] border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
         <ul className="grid grid-cols-6">
           {[...NAV.slice(0, 5), { href: "/perfil", label: "Perfil", icon: UserRound, key: "e" }].map((n) => {
-            const active = isActive(path, n.href) || (n.href === "/perfil" && (path.startsWith("/pessoas") || path.startsWith("/ajuda")));
+            const active = isActive(path, n.href) || (n.href === "/perfil" && (path.startsWith("/pessoas") || path.startsWith("/ajuda") || path.startsWith("/admin")));
             return (
               <li key={n.href}>
                 <Link

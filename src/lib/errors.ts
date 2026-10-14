@@ -10,6 +10,10 @@ export function friendlyError(err: unknown): string {
 
   if (m.includes("invalid input value for enum") || (m.includes("column") && (m.includes("does not exist") || m.includes("schema cache"))) || m.includes("could not find the function"))
     return "O banco está desatualizado para esta versão do app. O admin precisa rodar de novo o supabase/schema.sql no Supabase (SQL Editor).";
+  if (m.includes("campo_com_jogo")) {
+    const n = Number(raw.split(/CAMPO_COM_JOGO:\s*/i)[1]) || 0;
+    return `Não dá para apagar: ${n === 1 ? "tem 1 jogo marcado" : `tem ${n} jogos marcados`} neste campo. Cancele ou troque o campo desses jogos antes.`;
+  }
   if (m.includes("conflito_horario")) {
     const place = raw.split(/CONFLITO_HORARIO:\s*/i)[1]?.trim();
     return `Você já confirmou outro jogo nesse horário${place ? ` (${place})` : ""}. Lá, troque para “Não vou” antes de confirmar este.`;

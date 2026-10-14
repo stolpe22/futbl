@@ -28,24 +28,32 @@ export default function CampoPage() {
     const sb = supabase();
     const field = must(await sb.from("fields").select("*").eq("id", id).maybeSingle()) as FieldRow | null;
     if (!field) return null;
-    const [games, author] = await Promise.all([
+    const [games, author, linked, suggestions] = await Promise.all([
       sb.from("games").select("*").eq("field_id", id).gte("starts_at", new Date().toISOString()).neq("status", "cancelado").order("starts_at").limit(5),
       field.created_by ? sb.from("profiles").select("name").eq("id", field.created_by).maybeSingle() : Promise.resolve({ data: null }),
+      // jogos (passados ou futuros) que travam o apagar
+      sb.from("games").select("id", { count: "exact", head: true }).eq("field_id", id).neq("status", "cancelado"),
+      sb.from("suggestions").select("id", { count: "exact", head: true }).eq("field_id", id),
     ]);
-    return { field, games: (games.data ?? []) as Game[], author: (author.data as Pick<Profile, "name"> | null)?.name };
+    return {
+      field,
+      games: (games.data ?? []) as Game[],
+      author: (author.data as Pick<Profile, "name"> | null)?.name,
+      linkedGames: linked.count ?? 0,
+      suggestionCount: suggestions.count ?? 0,
+    };
   }, [id]);
 
   if (error) return <ErrorState message={error} onRetry={reload} />;
   if (loading && !data) return <Spinner />;
   if (!data) return <NotFound />;
 
-  const { field, games, author } = data;
+  const { field, games, author, linkedGames, suggestionCount } = data;
   const canEdit = isOrganizer || field.created_by === profile?.id;
 
   async function remove() {
     setDeleting(true);
     const sb = supabase();
-    const { data: linked } = await sb.from("games").select("id").eq("field_id", field.id);
     const { error } = await sb.from("fields").delete().eq("id", field.id);
     setDeleting(false);
     setConfirm(false);
@@ -58,8 +66,6 @@ export default function CampoPage() {
         onClick: async () => {
           const { error } = await sb.from("fields").insert(field);
           if (error) return toast.error(friendlyError(error));
-          if (linked?.length && isOrganizer)
-            await sb.from("games").update({ field_id: field.id }).in("id", (linked as { id: string }[]).map((g) => g.id));
           toast.success("Campo restaurado.");
           router.push(`/campos/${field.id}`);
         },
@@ -153,11 +159,17 @@ export default function CampoPage() {
               Cadastrado {author ? `por ${author} ` : ""}
               {fromNow(field.created_at)}
             </span>
-            {canEdit && (
-              <Button size="sm" variant="danger" onClick={() => setConfirm(true)}>
-                <Trash2 className="size-4" aria-hidden /> Apagar campo
-              </Button>
-            )}
+            {canEdit &&
+              (linkedGames > 0 ? (
+                <span className="flex items-center gap-1.5" title="Cancele ou troque o campo desses jogos para poder apagar.">
+                  <Trash2 className="size-4" aria-hidden />
+                  Não dá para apagar: {linkedGames === 1 ? "tem 1 jogo marcado aqui" : `tem ${linkedGames} jogos marcados aqui`}.
+                </span>
+              ) : (
+                <Button size="sm" variant="danger" onClick={() => setConfirm(true)}>
+                  <Trash2 className="size-4" aria-hidden /> Apagar campo
+                </Button>
+              ))}
           </div>
         </div>
       </div>
@@ -168,8 +180,10 @@ export default function CampoPage() {
         title="Apagar este campo?"
         message={
           <>
-            <strong className="text-ink">{field.name}</strong> sai do mapa e da lista. Jogos marcados nele ficam sem campo
-            definido. Você vai poder desfazer por alguns segundos.
+            <strong className="text-ink">{field.name}</strong> sai do mapa e da lista.
+            {suggestionCount > 0 &&
+              ` ${suggestionCount === 1 ? "A sugestão feita para ele também é apagada" : `As ${suggestionCount} sugestões feitas para ele também são apagadas`}.`}{" "}
+            Dá para desfazer o campo por alguns segundos{suggestionCount > 0 ? ", mas as sugestões não voltam" : ""}.
           </>
         }
         confirmLabel="Apagar campo"

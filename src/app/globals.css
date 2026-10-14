@@ -366,3 +366,40 @@ input[type="datetime-local"] {
     display: none;
   }
 }
+
+/* Celular/tablet: só animações baratas (transform/opacity). Nada de blur, blend ou repintura por quadro. */
+@media (max-width: 1023px), (pointer: coarse) {
+  .lg-stars,
+  .lg-lamp i,
+  .lg-ring,
+  .lg-shimmer,
+  .lg-rise.lg-shimmer {
+    animation: none;
+  }
+  .lg-rise.lg-shimmer {
+    animation: lg-rise-lite 0.6s ease-out var(--d, 0s) both;
+  }
+  .lg-rise {
+    animation-name: lg-rise-lite;
+    animation-duration: 0.6s;
+  }
+  .lg-beam {
+    animation: none;
+    filter: none;
+    mix-blend-mode: normal;
+    opacity: 0.7;
+  }
+  .lg-beam-l { transform: rotate(-14deg); }
+  .lg-beam-r { transform: rotate(14deg); }
+  .lg-lamp i { box-shadow: 0 0 6px 2px rgb(253 183 45 / 0.6); }
+  .lg-spot { display: none; }
+  .lg-ball-run svg { filter: none; }
+  .lg-ring {
+    background: linear-gradient(135deg, #fdb72d, rgb(255 255 255 / 0.08) 40%, rgb(255 255 255 / 0.08) 70%, #fdb72d);
+    box-shadow: 0 20px 50px -20px rgb(0 0 0 / 0.7);
+  }
+}
+@keyframes lg-rise-lite {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
