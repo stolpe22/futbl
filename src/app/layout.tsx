@@ -31,8 +31,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-dvh bg-bg text-ink">
         {children}
+        {/* embaixo: não cobre o menu do topo; no celular, acima da barra de navegação */}
         <Toaster
-          position="top-center"
+          position="bottom-right"
+          mobileOffset={{ bottom: "calc(76px + env(safe-area-inset-bottom))", left: 12, right: 12 }}
+          duration={3000}
           richColors
           closeButton
           toastOptions={{ style: { fontFamily: "inherit" } }}

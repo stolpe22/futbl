@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MapPin, Users } from "lucide-react";
+import { MapPin, Users, Wallet } from "lucide-react";
 import { countRsvps } from "@/lib/queries";
 import { useNow } from "@/lib/hooks";
-import { timeOf } from "@/lib/format";
+import { brl, timeOf } from "@/lib/format";
+import { gameCost, payingCount, share } from "@/lib/price";
 import type { GameWithField, Rsvp, RsvpStatus } from "@/lib/types";
 import { RsvpButtons } from "./rsvp";
 import { Badge, cx } from "./ui";
@@ -29,6 +30,8 @@ export function GameCard({
   const cancelled = game.status === "cancelado";
   const past = d.getTime() + game.duration_min * 60_000 < now;
   const full = game.max_players != null && c.vou >= game.max_players;
+  const cost = gameCost(game, game.field);
+  const each = cost ? share(cost.total, payingCount(c.vou, game.max_players)) : null;
 
   return (
     <article className={cx("rounded-2xl border border-line bg-surface p-4 sm:p-5", (cancelled || past) && "opacity-70")}>
@@ -57,6 +60,18 @@ export function GameCard({
             <span className="font-semibold text-confirma">{c.vou} vão</span>
             {game.max_players ? ` de ${game.max_players}` : ""} · {c.talvez} talvez
           </p>
+          {cost && !cancelled && (
+            <p className="mt-0.5 flex items-center gap-1 text-sm text-muted">
+              <Wallet className="size-3.5 shrink-0" aria-hidden />
+              {each != null ? (
+                <>
+                  <span className="font-semibold text-ink">{brl(each)} cada</span> · {brl(cost.total)} no total
+                </>
+              ) : (
+                <>{brl(cost.total)} no total · dividido entre quem for</>
+              )}
+            </p>
+          )}
         </div>
       </Link>
       {!cancelled && !past && (

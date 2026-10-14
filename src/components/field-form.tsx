@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { AlertTriangle, ExternalLink, Link2, MapPin, MousePointerClick, Search } from "lucide-react";
+import { AlertTriangle, ExternalLink, Link2, MapPin, MousePointerClick, Search, Undo2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import { phoneMask } from "@/lib/format";
@@ -79,6 +79,14 @@ export function FieldForm({
   const [v, setV] = useState<Values>(start);
   const [pos, setPos] = useState<LatLng | null>(
     initial ? { lat: initial.lat, lng: initial.lng } : prefill?.lat != null && prefill?.lng != null ? { lat: prefill.lat, lng: prefill.lng } : null,
+  );
+  // de onde o pino veio (busca, link ou o já salvo): dá para voltar se arrastar sem querer
+  const [origin, setOrigin] = useState<(LatLng & { from: string }) | null>(
+    initial
+      ? { lat: initial.lat, lng: initial.lng, from: "salvo" }
+      : prefill?.lat != null && prefill?.lng != null
+        ? { lat: prefill.lat, lng: prefill.lng, from: "da busca" }
+        : null,
   );
   // ID do lugar no Google: o único dado do Google que pode ser guardado. Serve para a foto.
   const [googleId, setGoogleId] = useState<string | null>(initial?.google_place_id ?? prefill?.googleId ?? null);
@@ -165,6 +173,7 @@ export function FieldForm({
   }, [prefill?.googleId]);
 
   async function pickResult(place: PlaceResult) {
+    setOrigin({ lat: place.lat, lng: place.lng, from: "da busca" });
     choosePosition({ lat: place.lat, lng: place.lng }, { address: place.address, name: place.name });
     setV((s) => ({
       ...s,
@@ -195,6 +204,7 @@ export function FieldForm({
     setV((s) => ({ ...s, maps_url: link.trim(), name: s.name || r.name || "" }));
     setGoogleId(null);
     setPhotoFor(null);
+    setOrigin({ lat: r.lat, lng: r.lng, from: "do link" });
     choosePosition({ lat: r.lat, lng: r.lng }, { name: r.name });
     toast.success("Pegamos a posição do link. Confira o pino no mapa.");
   }
@@ -391,7 +401,23 @@ export function FieldForm({
             <AlertTriangle className="size-4 shrink-0" aria-hidden /> {errors.pos}
           </p>
         ) : pos ? (
-          <p className="text-sm text-confirma" role="status">✓ Local marcado. Arraste o pino verde se precisar ajustar.</p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <p className="text-sm text-confirma" role="status">✓ Local marcado. Arraste o pino verde se precisar ajustar.</p>
+            {origin && (Math.abs(origin.lat - pos.lat) > 0.00001 || Math.abs(origin.lng - pos.lng) > 0.00001) && (
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setPos({ lat: origin.lat, lng: origin.lng });
+                  setFocus({ lat: origin.lat, lng: origin.lng, zoom: 17 });
+                  toast.success("Pino de volta no lugar original.");
+                }}
+              >
+                <Undo2 className="size-4" aria-hidden /> Voltar o pino para o lugar {origin.from === "salvo" ? "salvo" : `original (${origin.from})`}
+              </Button>
+            )}
+          </div>
         ) : null}
         {photoFor && (
           <div className="max-w-md">

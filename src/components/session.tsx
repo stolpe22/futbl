@@ -48,7 +48,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (t && (t as Profile).role !== "admin") target = t as Profile;
     }
     if (id && !target) clearViewAs();
-    setSimulating(!!target);
+    setSimulating(target?.id ?? null);
     setReal(me);
     setSimulated(target);
     setLoading(false);

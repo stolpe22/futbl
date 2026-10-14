@@ -8,6 +8,7 @@ import { addWeeks, format } from "date-fns";
 import { AlertTriangle } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
+import { hoursLabel } from "@/lib/price";
 import { brl, dateTimeShort } from "@/lib/format";
 import { useNow, useSubmitShortcut, useUnsavedGuard } from "@/lib/hooks";
 import type { FieldRow, Game } from "@/lib/types";
@@ -198,13 +199,11 @@ export function GameForm({
             optional
             error={errors.price}
             hint={
-              suggestedPrice != null && !price ? (
-                <button type="button" className="underline" onClick={() => touch(setPrice)(String(suggestedPrice))}>
-                  Usar {brl(suggestedPrice)} (preço do campo)
-                </button>
-              ) : (
-                "Dividimos pelo número de confirmados."
-              )
+              suggestedPrice != null && !price
+                ? `Deixe vazio para usar o preço do campo: ${brl(field!.price_per_hour)}/h × ${hoursLabel(Number(duration))} = ${brl(suggestedPrice)}. Dividimos entre os confirmados.`
+                : suggestedPrice != null
+                  ? `Preço do campo daria ${brl(suggestedPrice)}. Apague para usar ele.`
+                  : "Dividimos pelo número de confirmados."
             }
           >
             <Input id="g-price" inputMode="decimal" value={price} onChange={(e) => touch(setPrice)(e.target.value.replace(/[^\d,.]/g, ""))} aria-invalid={!!errors.price} />

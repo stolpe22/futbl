@@ -10,6 +10,8 @@ export type Profile = {
   phone: string | null;
   role: Role;
   active: boolean;
+  /** pessoa de teste: só o admin (e outras de teste) enxergam */
+  is_test: boolean;
   created_at: string;
 };
 
@@ -18,6 +20,7 @@ export type Invite = {
   role: Role;
   name: string | null;
   invited_by: string | null;
+  is_test: boolean;
   created_at: string;
 };
 
@@ -57,7 +60,7 @@ export type Game = {
 };
 
 export type GameWithField = Game & {
-  field: Pick<FieldRow, "id" | "name" | "address" | "lat" | "lng"> | null;
+  field: Pick<FieldRow, "id" | "name" | "address" | "lat" | "lng" | "price_per_hour"> | null;
 };
 
 export type Rsvp = { game_id: string; user_id: string; status: RsvpStatus; updated_at: string };

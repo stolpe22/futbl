@@ -13,6 +13,7 @@ import { FieldLinks } from "@/components/field-links";
 import { Avatar, Badge, Button, Card, ConfirmDialog, ErrorState, LinkButton, PageHeader, Spinner, cx } from "@/components/ui";
 import { applyRsvp, countRsvps } from "@/lib/queries";
 import { brl, dateLong, shareWhatsappUrl, timeOf } from "@/lib/format";
+import { gameCost, hoursLabel, payingCount, share } from "@/lib/price";
 import { RSVP_LABEL, type FieldRow, type Game, type Profile, type Rsvp, type RsvpStatus } from "@/lib/types";
 
 type Data = { game: Game; field: FieldRow | null; rsvps: Rsvp[]; members: Profile[] };
@@ -67,7 +68,9 @@ export default function JogoPage() {
   const past = end.getTime() < Date.now();
   const c = countRsvps(rsvps, game.id);
   const mine = rsvps.find((r) => r.user_id === profile!.id)?.status ?? null;
-  const perPerson = game.price_total != null && c.vou > 0 ? game.price_total / c.vou : null;
+  const cost = gameCost(game, field);
+  const paying = payingCount(c.vou, game.max_players);
+  const perPerson = cost ? share(cost.total, paying) : null;
   const byStatus = (s: RsvpStatus) =>
     rsvps
       .filter((r) => r.status === s)
@@ -81,6 +84,7 @@ export default function JogoPage() {
     `🗓️ ${dateLong(game.starts_at)} às ${timeOf(game.starts_at)}`,
     `📍 ${field?.name ?? "Campo a definir"}`,
     `✅ ${c.vou} confirmados${game.max_players ? ` de ${game.max_players}` : ""}`,
+    ...(cost && !cancelled ? [`💰 ${brl(cost.total)}${perPerson != null ? ` · ${brl(perPerson)} cada` : ""}`] : []),
     "",
     `Confirme aqui: ${url}`,
   ].join("\n");
@@ -194,14 +198,9 @@ export default function JogoPage() {
               )}
               {field?.address && <span className="block text-sm text-muted">{field.address}</span>}
             </InfoRow>
-            {game.price_total != null && (
+            {cost && (
               <InfoRow icon={Wallet} label="Valor">
-                {brl(game.price_total)} no total
-                {perPerson != null && (
-                  <span className="block text-sm text-muted">
-                    ≈ <strong className="text-ink">{brl(perPerson)}</strong> por pessoa com {c.vou} confirmados
-                  </span>
-                )}
+                <SplitBox cost={cost} paying={paying} maxPlayers={game.max_players} cancelled={cancelled} />
               </InfoRow>
             )}
             {field && <FieldLinks field={field} compact />}
@@ -341,5 +340,46 @@ function PeopleGroup({
         </ul>
       )}
     </section>
+  );
+}
+
+/** Racha: total do aluguel e quanto fica para cada confirmado, atualizando conforme a galera confirma */
+function SplitBox({
+  cost, paying, maxPlayers, cancelled,
+}: {
+  cost: NonNullable<ReturnType<typeof gameCost>>; paying: number; maxPlayers: number | null; cancelled: boolean;
+}) {
+  const each = share(cost.total, paying);
+  const nextEach = !maxPlayers || paying < maxPlayers ? share(cost.total, paying + 1) : null;
+  const fullEach = maxPlayers && paying < maxPlayers ? share(cost.total, maxPlayers) : null;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p>
+        <strong className="text-lg">{brl(cost.total)}</strong> no total
+        <span className="block text-sm text-muted">
+          {cost.source === "campo"
+            ? `${brl(cost.perHour)}/h do campo × ${hoursLabel(cost.hours * 60)}`
+            : `valor combinado pelo organizador${cost.perHour != null ? ` (campo: ${brl(cost.perHour)}/h)` : ""}`}
+        </span>
+      </p>
+      {!cancelled &&
+        (each != null ? (
+          <div className="rounded-xl bg-confirma-bg px-3 py-2">
+            <p>
+              <strong className="text-xl text-confirma">{brl(each)}</strong> <span className="font-medium">para cada um</span>
+            </p>
+            <p className="text-sm text-muted">
+              dividido entre {paying} confirmado{paying === 1 ? "" : "s"}
+              {nextEach != null && ` · se mais 1 confirmar: ${brl(nextEach)}`}
+              {fullEach != null && ` · com ${maxPlayers}: ${brl(fullEach)}`}
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-muted">
+            Ninguém confirmou ainda.
+            {maxPlayers ? ` Com ${maxPlayers} confirmados fica ${brl(share(cost.total, maxPlayers))} para cada um.` : " O valor é dividido entre quem confirmar."}
+          </p>
+        ))}
+    </div>
   );
 }

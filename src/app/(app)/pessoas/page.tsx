@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Copy, Eye, MessageCircle, Search, Trash2, UserPlus } from "lucide-react";
+import { Copy, Eye, FlaskConical, MessageCircle, Search, Trash2, UserPlus } from "lucide-react";
 import { startViewAs } from "@/lib/ver-como";
 import { supabase } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
@@ -56,6 +56,18 @@ export default function PessoasPage() {
     });
   }
 
+  /** Liga/desliga "pessoa de teste" (perfil e convite, para valer se ela criar conta de novo) */
+  async function setTest(p: Profile, is_test: boolean) {
+    const sb = supabase();
+    const { error } = await sb.from("profiles").update({ is_test }).eq("id", p.id);
+    if (error) return toast.error(friendlyError(error));
+    await sb.from("invites").update({ is_test }).eq("email", p.email);
+    setData((d) => d && { ...d, profiles: d.profiles.map((x) => (x.id === p.id ? { ...x, is_test } : x)) });
+    toast.success(is_test ? `${p.name} agora é de teste: só você vê.` : `${p.name} voltou a aparecer para todo mundo.`, {
+      action: { label: "Desfazer", onClick: () => setTest({ ...p, is_test }, !is_test) },
+    });
+  }
+
   async function removeInvite(inv: Invite) {
     const sb = supabase();
     const { error } = await sb.from("invites").delete().eq("email", inv.email);
@@ -75,7 +87,14 @@ export default function PessoasPage() {
 
   return (
     <>
-      <PageHeader title="Pessoas" subtitle={data ? `${data.profiles.filter((p) => p.active).length} no grupo${pending.length ? ` · ${pending.length} convite(s) pendente(s)` : ""}` : "Quem joga com a gente"} />
+      <PageHeader
+        title="Pessoas"
+        subtitle={
+          data
+            ? `${data.profiles.filter((p) => p.active && !p.is_test).length} no grupo${isAdmin && data.profiles.some((p) => p.is_test) ? ` · ${data.profiles.filter((p) => p.is_test).length} de teste` : ""}${pending.length ? ` · ${pending.length} convite(s) pendente(s)` : ""}`
+            : "Quem joga com a gente"
+        }
+      />
 
       {error ? (
         <ErrorState message={error} onRetry={reload} />
@@ -103,6 +122,7 @@ export default function PessoasPage() {
                         {p.name || "Sem nome"}
                         {p.id === profile?.id && <span className="text-sm font-normal text-muted">(você)</span>}
                         {!p.active && <Badge tone="red">Desativado</Badge>}
+                        {p.is_test && <Badge tone="ink">Teste</Badge>}
                       </p>
                       <p className="truncate text-sm text-muted">{isOrganizer ? p.email : ROLE_LABEL[p.role]}</p>
                     </div>
@@ -123,6 +143,14 @@ export default function PessoasPage() {
                             <option key={r} value={r}>{ROLE_LABEL[r]}</option>
                           ))}
                         </Select>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setTest(p, !p.is_test)}
+                          title={p.is_test ? "Voltar a mostrar para todo mundo" : "Esconder de todo mundo: só você (e outras pessoas de teste) vê"}
+                        >
+                          <FlaskConical className="size-4" aria-hidden /> {p.is_test ? "Tirar de teste" : "Marcar teste"}
+                        </Button>
                         <Button size="sm" variant={p.active ? "ghost" : "secondary"} onClick={() => setActive(p, !p.active)}>
                           {p.active ? "Desativar" : "Reativar"}
                         </Button>
@@ -169,7 +197,10 @@ export default function PessoasPage() {
                       <li key={i.email} className="flex items-center gap-2 py-2">
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium">{i.email}</p>
-                          <p className="text-xs text-muted">{ROLE_LABEL[i.role]} · convidado {fromNow(i.created_at)}</p>
+                          <p className="text-xs text-muted">
+                            {ROLE_LABEL[i.role]}
+                            {i.is_test && " · teste"} · convidado {fromNow(i.created_at)}
+                          </p>
                         </div>
                         {(i.role === "jogador" || isAdmin) && (
                           <Button size="sm" variant="ghost" onClick={() => removeInvite(i)} aria-label={`Remover convite de ${i.email}`} title="Remover convite">
@@ -195,6 +226,7 @@ function InviteForm({ isAdmin, existing, onInvited }: { isAdmin: boolean; existi
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState<string[] | null>(null);
   const [confirmRole, setConfirmRole] = useState(false);
+  const [isTest, setIsTest] = useState(false);
 
   const parsed = useMemo(() => {
     const list = [...new Set(raw.split(/[\s,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean))];
@@ -208,10 +240,10 @@ function InviteForm({ isAdmin, existing, onInvited }: { isAdmin: boolean; existi
   async function submit(e?: FormEvent) {
     e?.preventDefault();
     if (!parsed.valid.length) return;
-    if (role !== "jogador" && !confirmRole) return setConfirmRole(true);
+    if (role !== "jogador" && !isTest && !confirmRole) return setConfirmRole(true);
     setConfirmRole(false);
     setSaving(true);
-    const rows = parsed.valid.map((email) => ({ email, role }));
+    const rows = parsed.valid.map((email) => ({ email, role, is_test: isAdmin && isTest }));
     const { data, error } = await supabase().from("invites").insert(rows).select("*");
     setSaving(false);
     if (error) return toast.error(friendlyError(error));
@@ -264,6 +296,17 @@ function InviteForm({ isAdmin, existing, onInvited }: { isAdmin: boolean; existi
               {isAdmin && <option value="admin">Admin</option>}
             </Select>
           </FormField>
+          {isAdmin && (
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line p-3">
+              <input type="checkbox" className="mt-1 size-4 accent-[var(--gold)]" checked={isTest} onChange={(e) => setIsTest(e.target.checked)} />
+              <span className="text-sm">
+                <span className="flex items-center gap-1.5 font-medium"><FlaskConical className="size-4" aria-hidden /> Pessoa de teste</span>
+                <span className="text-muted">
+                  Para testar o app. Só você (e outras pessoas de teste) vê ela, as presenças, os votos e as sugestões dela.
+                </span>
+              </span>
+            </label>
+          )}
           <Button type="submit" variant="primary" loading={saving} disabled={!parsed.valid.length}>
             {parsed.valid.length > 1 ? `Convidar ${parsed.valid.length} pessoas` : "Convidar"}
           </Button>

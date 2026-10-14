@@ -5,11 +5,21 @@ type Client = ReturnType<typeof createBrowserClient>;
 let client: Client | undefined;
 let readOnly: Client | undefined;
 let simulating = false;
+let viewAsId: string | null = null;
+
+/** No "Ver como", avisa o banco de quem é a visão: as regras de quem vê o quê passam a valer como para essa pessoa */
+const viewAsFetch: typeof fetch = (input, init) => {
+  if (!viewAsId) return fetch(input, init);
+  const headers = new Headers(init?.headers);
+  headers.set("x-ver-como", viewAsId);
+  return fetch(input, { ...init, headers });
+};
 
 export function supabase(): Client {
   client ??= createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    { global: { fetch: viewAsFetch } },
   );
   if (!simulating) return client;
   readOnly ??= blockWrites(client);
@@ -17,8 +27,9 @@ export function supabase(): Client {
 }
 
 /** Liga o modo "só ver" do "Ver como" (chamado pelo SessionProvider) */
-export function setSimulating(on: boolean) {
-  simulating = on;
+export function setSimulating(id: string | null) {
+  simulating = !!id;
+  viewAsId = id;
 }
 
 export const SIMULATION_ERROR = "SIMULACAO";

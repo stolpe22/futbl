@@ -56,6 +56,10 @@ create table if not exists public.profiles (
   created_at  timestamptz not null default now()
 );
 
+-- Pessoas de teste: só o admin (e outras pessoas de teste) enxergam
+alter table public.invites  add column if not exists is_test boolean not null default false;
+alter table public.profiles add column if not exists is_test boolean not null default false;
+
 -- ---------------------------------------------------------------------
 -- Funções auxiliares (security definer para não cair em recursão de RLS)
 -- ---------------------------------------------------------------------
@@ -77,6 +81,38 @@ $$;
 create or replace function public.is_admin()
 returns boolean language sql stable security definer set search_path = public as $$
   select coalesce(public.my_role() = 'admin', false)
+$$;
+
+-- De quem é a visão: o próprio usuário ou, no "Ver como" do admin, a pessoa simulada
+-- (header x-ver-como). Só o admin pode usar, e só serve para ver MENOS, nunca mais.
+create or replace function public.viewer_id()
+returns uuid language plpgsql stable security definer set search_path = public as $$
+declare h text;
+begin
+  if public.is_admin() then
+    h := current_setting('request.headers', true)::json->>'x-ver-como';
+    if h ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
+      return h::uuid;
+    end if;
+  end if;
+  return auth.uid();
+end $$;
+
+-- Quem está vendo (de verdade ou simulado) é admin?
+create or replace function public.viewer_is_admin()
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.profiles where id = public.viewer_id() and role = 'admin' and active)
+$$;
+
+-- Posso ver esta pessoa (e o que ela fez)? Pessoa de teste some para quem é de verdade.
+-- Admin vê tudo; pessoas de teste se veem entre si.
+create or replace function public.can_see_user(p_user uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select p_user is null
+      or p_user = public.viewer_id()
+      or public.viewer_is_admin()
+      or coalesce((select is_test from public.profiles where id = public.viewer_id()), false)
+      or not coalesce((select is_test from public.profiles where id = p_user), false)
 $$;
 
 -- Usado na tela de login para dar uma mensagem clara antes de tentar cadastrar
@@ -109,12 +145,13 @@ declare
   inv public.invites;
 begin
   select * into inv from public.invites where email = lower(new.email);
-  insert into public.profiles (id, email, name, role)
+  insert into public.profiles (id, email, name, role, is_test)
   values (
     new.id,
     lower(new.email),
     coalesce(nullif(new.raw_user_meta_data->>'name', ''), inv.name, split_part(new.email, '@', 1)),
-    coalesce(inv.role, 'jogador')
+    coalesce(inv.role, 'jogador'),
+    coalesce(inv.is_test, false)
   )
   on conflict (id) do nothing;
   return new;
@@ -128,9 +165,9 @@ create trigger on_auth_user_created after insert on auth.users
 create or replace function public.guard_profile_update()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  if (new.role is distinct from old.role or new.active is distinct from old.active)
+  if (new.role is distinct from old.role or new.active is distinct from old.active or new.is_test is distinct from old.is_test)
      and not public.is_admin() then
-    raise exception 'Só o admin pode mudar o papel ou desativar alguém';
+    raise exception 'Só o admin pode mudar o papel, desativar alguém ou marcar como teste';
   end if;
   if new.id = auth.uid() and new.role is distinct from old.role and old.role = 'admin' then
     raise exception 'Você não pode tirar seu próprio acesso de admin';
@@ -329,20 +366,21 @@ alter table public.poll_votes   enable row level security;
 
 -- invites: organizador vê e cria; só admin cria organizador/admin
 drop policy if exists invites_select on public.invites;
-create policy invites_select on public.invites for select to authenticated using (public.is_organizer());
+create policy invites_select on public.invites for select to authenticated using (public.is_organizer() and (not is_test or public.viewer_is_admin()));
 drop policy if exists invites_insert on public.invites;
 create policy invites_insert on public.invites for insert to authenticated
-  with check (public.is_organizer() and (role = 'jogador' or public.is_admin()));
+  with check (public.is_organizer() and ((role = 'jogador' and not is_test) or public.is_admin()));
 drop policy if exists invites_update on public.invites;
 create policy invites_update on public.invites for update to authenticated
-  using (public.is_organizer()) with check (public.is_organizer() and (role = 'jogador' or public.is_admin()));
+  using (public.is_organizer()) with check (public.is_organizer() and ((role = 'jogador' and not is_test) or public.is_admin()));
 drop policy if exists invites_delete on public.invites;
 create policy invites_delete on public.invites for delete to authenticated
   using (public.is_organizer() and (role = 'jogador' or public.is_admin()));
 
 -- profiles
 drop policy if exists profiles_select on public.profiles;
-create policy profiles_select on public.profiles for select to authenticated using (public.is_member() or id = auth.uid());
+create policy profiles_select on public.profiles for select to authenticated
+  using ((public.is_member() or id = auth.uid()) and public.can_see_user(id));
 drop policy if exists profiles_update on public.profiles;
 create policy profiles_update on public.profiles for update to authenticated
   using (id = auth.uid() or public.is_admin()) with check (id = auth.uid() or public.is_admin());
@@ -385,7 +423,7 @@ create policy games_write on public.games for all to authenticated
 
 -- rsvps: membro vê todos; cada um mexe só no seu
 drop policy if exists rsvps_select on public.rsvps;
-create policy rsvps_select on public.rsvps for select to authenticated using (public.is_member());
+create policy rsvps_select on public.rsvps for select to authenticated using (public.is_member() and public.can_see_user(user_id));
 drop policy if exists rsvps_insert on public.rsvps;
 create policy rsvps_insert on public.rsvps for insert to authenticated
   with check (public.is_member() and user_id = auth.uid());
@@ -410,7 +448,7 @@ create policy poll_options_write on public.poll_options for all to authenticated
 
 -- votes: membro vê; vota só em votação aberta e só por si
 drop policy if exists poll_votes_select on public.poll_votes;
-create policy poll_votes_select on public.poll_votes for select to authenticated using (public.is_member());
+create policy poll_votes_select on public.poll_votes for select to authenticated using (public.is_member() and public.can_see_user(user_id));
 drop policy if exists poll_votes_insert on public.poll_votes;
 create policy poll_votes_insert on public.poll_votes for insert to authenticated
   with check (public.is_member() and user_id = auth.uid() and public.poll_is_open(poll_id));
@@ -525,7 +563,7 @@ alter table public.suggestions         enable row level security;
 alter table public.suggestion_supports enable row level security;
 
 drop policy if exists suggestions_select on public.suggestions;
-create policy suggestions_select on public.suggestions for select to authenticated using (public.is_member());
+create policy suggestions_select on public.suggestions for select to authenticated using (public.is_member() and public.can_see_user(created_by));
 drop policy if exists suggestions_update on public.suggestions;
 create policy suggestions_update on public.suggestions for update to authenticated
   using (public.is_organizer()) with check (public.is_organizer());
@@ -534,7 +572,7 @@ create policy suggestions_delete on public.suggestions for delete to authenticat
   using (public.is_organizer() or (created_by = auth.uid() and status = 'pendente'));
 
 drop policy if exists supports_select on public.suggestion_supports;
-create policy supports_select on public.suggestion_supports for select to authenticated using (public.is_member());
+create policy supports_select on public.suggestion_supports for select to authenticated using (public.is_member() and public.can_see_user(user_id));
 drop policy if exists supports_insert on public.suggestion_supports;
 create policy supports_insert on public.suggestion_supports for insert to authenticated
   with check (public.is_member() and user_id = auth.uid());

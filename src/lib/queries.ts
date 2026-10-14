@@ -1,7 +1,7 @@
 import { supabase } from "./supabase/client";
 import type { GameWithField, Rsvp, RsvpStatus } from "./types";
 
-const GAME_SELECT = "*, field:fields(id,name,address,lat,lng)";
+const GAME_SELECT = "*, field:fields(id,name,address,lat,lng,price_per_hour)";
 
 export async function loadGames(opts: { from?: Date; to?: Date; limit?: number; ascending?: boolean }) {
   const sb = supabase();
