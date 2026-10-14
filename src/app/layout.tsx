@@ -8,9 +8,23 @@ const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: { default: "Futebol da Missão", template: "%s · Futebol da Missão" },
   description: "Agenda, campos e votações do futebol da galera do MBL / Missão em Goiânia.",
+  // Prévia do link nas redes (a imagem vem de opengraph-image.tsx)
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    siteName: "Futebol da Missão",
+    title: "Futebol da Missão",
+    description: "Marque o jogo, escolha o campo e confirme presença num lugar só.",
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {
