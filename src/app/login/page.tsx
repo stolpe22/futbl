@@ -1,50 +1,63 @@
 "use client";
 
-import { Suspense, useEffect, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import { isValidEmail } from "@/lib/format";
-import { Button, FormField, Input, Segmented } from "@/components/ui";
+import { Button, FormField, Input, Segmented, cx } from "@/components/ui";
+import { LedTicker, StadiumScene, kickBall } from "@/components/login-stage";
 
 type Mode = "entrar" | "criar" | "link" | "esqueci";
 
 export default function LoginPage() {
+  const root = useRef<HTMLDivElement>(null);
+  const frame = useRef(0);
+  // o refletor segue o mouse
+  function onPointerMove(e: React.PointerEvent) {
+    if (e.pointerType !== "mouse") return;
+    const { clientX, clientY } = e;
+    cancelAnimationFrame(frame.current);
+    frame.current = requestAnimationFrame(() => {
+      root.current?.style.setProperty("--mx", `${clientX}px`);
+      root.current?.style.setProperty("--my", `${clientY}px`);
+    });
+  }
+
   return (
-    <div className="grid min-h-dvh lg:grid-cols-2">
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-[#1b2333] p-10 text-[#f7f4ec] lg:flex">
-        <div className="flex items-baseline gap-1.5 text-xl font-bold">
-          Missão <span className="font-medium text-[#979083]">Futebol</span>
-        </div>
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-widest text-[#fdb72d]">Goiânia · Grupo MBL / Missão</p>
-          <h1 className="mt-3 text-5xl font-bold leading-[1.05] tracking-tight">
-            Chega de enquete
-            <br />
-            perdida no grupo.
-          </h1>
-          <p className="mt-4 max-w-md text-lg text-[#c9c3b5]">
+    <div ref={root} onPointerMove={onPointerMove} className="relative min-h-dvh overflow-hidden text-[#f7f4ec]">
+      <StadiumScene />
+      <div className="relative z-10 mx-auto grid min-h-dvh max-w-6xl content-center grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-20 pt-6 lg:gap-10 sm:px-8 lg:grid-cols-[minmax(0,1fr)_440px] lg:items-center lg:gap-16">
+        <header>
+          <div className="lg-rise flex items-center gap-3" style={{ "--d": "0s" } as React.CSSProperties}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- ícone SVG do próprio app */}
+            <img src="/icon.svg" alt="" className="size-11 rounded-xl shadow-[0_0_30px_rgb(253_183_45/0.35)]" />
+            <div className="leading-tight">
+              <p className="text-lg font-bold">Futebol da Missão</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#fdb72d]">Goiânia · MBL / Missão</p>
+            </div>
+          </div>
+          <p className="lg-rise lg-shimmer mt-4 text-2xl font-black tracking-tight lg:mt-10 lg:text-6xl" style={{ "--d": "0.2s" } as React.CSSProperties}>
+            Bora pro jogo.
+          </p>
+          <p className="lg-rise mt-1 max-w-md text-sm text-[#c9c3b5] lg:mt-4 lg:text-xl" style={{ "--d": "0.35s" } as React.CSSProperties}>
             Marque o jogo, escolha o campo e confirme presença num lugar só.
           </p>
-        </div>
-        <p className="text-sm text-[#979083]">Acesso só para quem foi convidado pelo grupo.</p>
-        <div aria-hidden className="pointer-events-none absolute -bottom-24 -right-24 size-96 rounded-full border-[40px] border-[#fdb72d]/15" />
-      </aside>
-      <main className="flex items-center justify-center px-4 py-10">
-        <div className="w-full max-w-sm">
-          <div className="mb-8 lg:hidden">
-            <div className="text-xl font-bold">
-              Missão <span className="font-medium text-muted">Futebol</span> ⚽
+        </header>
+        <main className="lg-rise" style={{ "--d": "0.5s" } as React.CSSProperties}>
+          <div className="lg-ring">
+            <div className="rounded-[calc(1.75rem-1.5px)] bg-surface/95 p-6 text-ink backdrop-blur-xl sm:p-8">
+              <Suspense>
+                <LoginForms />
+              </Suspense>
             </div>
-            <p className="mt-1 text-muted">Agenda, campos e votações do futebol do grupo.</p>
           </div>
-          <Suspense>
-            <LoginForms />
-          </Suspense>
-        </div>
-      </main>
+          <p className="mt-4 text-center text-sm text-[#979083]">Acesso só para quem foi convidado pelo grupo.</p>
+        </main>
+      </div>
+      <LedTicker />
     </div>
   );
 }
@@ -63,6 +76,19 @@ function LoginForms() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [sent, setSent] = useState<null | { kind: "confirmar" | "link" | "senha"; email: string }>(null);
+  const [shake, setShake] = useState(false);
+
+  /** Entrou: avisa e segue */
+  function welcome(message: string) {
+    toast.success(message);
+    router.replace(next);
+    router.refresh();
+  }
+
+  function fail(message: string) {
+    setError(message);
+    setShake(true);
+  }
 
   useEffect(() => {
     if (params.get("erro") === "link")
@@ -85,6 +111,7 @@ function LoginForms() {
       else if (password !== password2) errs.password2 = "As senhas não são iguais";
     }
     setFieldErrors(errs);
+    if (Object.keys(errs).length) setShake(true);
     return Object.keys(errs).length === 0;
   }
 
@@ -92,7 +119,7 @@ function LoginForms() {
     const { data, error } = await supabase().rpc("is_email_invited", { p_email: email.trim() });
     if (error) return true; // não bloqueia se a checagem falhar; o servidor valida de novo
     if (!data) {
-      setError("Esse email não está na lista do grupo. Peça para um organizador te cadastrar e tente de novo.");
+      fail("Esse email não está na lista do grupo. Peça para um organizador te cadastrar e tente de novo.");
       return false;
     }
     return true;
@@ -102,15 +129,16 @@ function LoginForms() {
     e.preventDefault();
     setError(null);
     if (!validate()) return;
+    kickBall();
     setBusy(true);
     const sb = supabase();
     const mail = email.trim().toLowerCase();
     try {
       if (mode === "entrar") {
-        const { error } = await sb.auth.signInWithPassword({ email: mail, password });
+        const { data, error } = await sb.auth.signInWithPassword({ email: mail, password });
         if (error) throw error;
-        router.replace(next);
-        router.refresh();
+        const first = String(data.user?.user_metadata?.name ?? "").trim().split(" ")[0];
+        welcome(first ? `Bem-vindo de volta, ${first}. Bora pro jogo!` : "Bem-vindo de volta. Bora pro jogo!");
         return;
       }
       if (!(await checkInvited())) return;
@@ -125,9 +153,7 @@ function LoginForms() {
         if (data.user && data.user.identities?.length === 0) throw new Error("User already registered");
         if (data.session) {
           // sem confirmação por email: já entra direto
-          toast.success(`Conta criada. Bem-vindo, ${name.trim().split(" ")[0]}!`);
-          router.replace(next);
-          router.refresh();
+          welcome(`Conta criada. Bem-vindo ao time, ${name.trim().split(" ")[0]}!`);
           return;
         }
         // só acontece se "Confirm email" ainda estiver ligado no Supabase
@@ -145,7 +171,7 @@ function LoginForms() {
         setSent({ kind: "senha", email: mail });
       }
     } catch (err) {
-      setError(friendlyError(err));
+      fail(friendlyError(err));
     } finally {
       setBusy(false);
     }
@@ -202,7 +228,12 @@ function LoginForms() {
   };
 
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col gap-5">
+    <form
+      onSubmit={submit}
+      noValidate
+      className={cx("flex flex-col gap-5", shake && "lg-shake")}
+      onAnimationEnd={() => setShake(false)}
+    >
       {(mode === "entrar" || mode === "criar") && (
         <Segmented
           label="Tipo de acesso"
