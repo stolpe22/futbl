@@ -232,7 +232,7 @@ function useNavBadges(me: string | undefined, isOrganizer: boolean, isAdmin: boo
       sb.from("polls").select("id, closes_at").eq("closed", false),
       sb.from("poll_votes").select("poll_id").eq("user_id", me),
       isOrganizer ? pendingSuggestions : pendingSuggestions.neq("created_by", me).gt("created_at", lastSeenSuggestions()),
-      isAdmin
+      isOrganizer
         ? sb.from("access_requests").select("id", { count: "exact", head: true }).eq("status", "pendente")
         : Promise.resolve({ count: 0 }),
     ]).then(([games, myRsvps, polls, myVotes, suggestions, requests]) => {

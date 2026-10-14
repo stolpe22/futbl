@@ -201,7 +201,7 @@ export default function PessoasPage() {
 
           {isOrganizer && (
             <aside className="flex flex-col gap-4">
-              {isAdmin && <AccessRequests onApproved={reload} />}
+              <AccessRequests isAdmin={isAdmin} onApproved={reload} />
               <InviteForm
                 isAdmin={isAdmin}
                 existing={new Set([...(data?.invites.map((i) => i.email) ?? []), ...(data?.profiles.map((p) => p.email) ?? [])])}
@@ -346,17 +346,38 @@ function InviteForm({ isAdmin, existing, onInvited }: { isAdmin: boolean; existi
   );
 }
 
-type AccessRequest = { id: string; email: string; name: string; phone: string | null; note: string | null; created_at: string };
+type AccessRequest = {
+  id: string;
+  email: string;
+  name: string;
+  phone: string | null;
+  note: string | null;
+  created_at: string;
+  status: "pendente" | "aprovado" | "recusado";
+  decided_at: string | null;
+  as_test: boolean;
+  decider: { name: string } | null;
+};
 
-/** Pedidos vindos da página pública "Pedir acesso". Só o admin vê e decide. */
-function AccessRequests({ onApproved }: { onApproved: () => void }) {
-  const { data, error, setData } = useLoad(
+/** Pedidos vindos da página pública "Pedir acesso". Organizadores e admin decidem; fica registrado quem decidiu. */
+function AccessRequests({ isAdmin, onApproved }: { isAdmin: boolean; onApproved: () => void }) {
+  const { profile } = useSession();
+  const { data: all, error, setData } = useLoad(
     async () =>
       must(
-        await supabase().from("access_requests").select("id,email,name,phone,note,created_at").eq("status", "pendente").order("created_at"),
-      ) as AccessRequest[],
+        await supabase()
+          .from("access_requests")
+          .select("id,email,name,phone,note,created_at,status,decided_at,as_test,decider:profiles!access_requests_decided_by_fkey(name)")
+          .order("created_at", { ascending: false })
+          .limit(200),
+      ) as unknown as AccessRequest[],
     [],
   );
+  const data = all?.filter((r) => r.status === "pendente").reverse();
+  const history = (all ?? [])
+    .filter((r) => r.status !== "pendente")
+    .sort((a, b) => (b.decided_at ?? "").localeCompare(a.decided_at ?? ""));
+  const [showHistory, setShowHistory] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [approved, setApproved] = useState<AccessRequest | null>(null);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -367,7 +388,14 @@ function AccessRequests({ onApproved }: { onApproved: () => void }) {
     const { error } = await supabase().rpc("decide_access_request", { p_id: r.id, p_approve: approve, p_test: test });
     setBusy(null);
     if (error) return toast.error(friendlyError(error));
-    setData((list) => list?.filter((x) => x.id !== r.id) ?? list);
+    setData(
+      (list) =>
+        list?.map((x) =>
+          x.id === r.id
+            ? { ...x, status: approve ? "aprovado" : "recusado", decided_at: new Date().toISOString(), as_test: approve && test, decider: { name: profile!.name } }
+            : x,
+        ) ?? list,
+    );
     if (approve) {
       setApproved(r);
       onApproved();
@@ -396,7 +424,7 @@ function AccessRequests({ onApproved }: { onApproved: () => void }) {
           <Copy className="size-4" aria-hidden /> Copiar link
         </Button>
       </div>
-      <p className="mb-3 text-sm text-muted">Quem pediu pela página pública. Aprovar vira convite de jogador.</p>
+      <p className="mb-3 text-sm text-muted">Quem pediu pela página pública. Aprovar vira convite de jogador e fica registrado quem aprovou.</p>
 
       {approved && (
         <div className="mb-3 flex flex-col gap-2 rounded-xl bg-confirma-bg p-3 text-sm" role="status">
@@ -461,9 +489,11 @@ function AccessRequests({ onApproved }: { onApproved: () => void }) {
                 <Button size="sm" variant="primary" loading={busy === r.id} onClick={() => decide(r, true)}>
                   <Check className="size-4" aria-hidden /> Aprovar
                 </Button>
-                <Button size="sm" variant="ghost" disabled={busy === r.id} onClick={() => decide(r, true, true)} title="Aprova como pessoa de teste: só você vê">
-                  <FlaskConical className="size-4" aria-hidden /> Aprovar como teste
-                </Button>
+                {isAdmin && (
+                  <Button size="sm" variant="ghost" disabled={busy === r.id} onClick={() => decide(r, true, true)} title="Aprova como pessoa de teste: só você vê">
+                    <FlaskConical className="size-4" aria-hidden /> Aprovar como teste
+                  </Button>
+                )}
                 <Button size="sm" variant="ghost" disabled={busy === r.id} onClick={() => decide(r, false)}>
                   <X className="size-4" aria-hidden /> Recusar
                 </Button>
@@ -471,6 +501,37 @@ function AccessRequests({ onApproved }: { onApproved: () => void }) {
             </li>
           ))}
         </ul>
+      )}
+
+      {history.length > 0 && (
+        <div className="mt-3 border-t border-line pt-3">
+          <button
+            type="button"
+            className="text-sm font-semibold text-gold-ink underline-offset-4 hover:underline"
+            aria-expanded={showHistory}
+            onClick={() => setShowHistory((v) => !v)}
+          >
+            {showHistory ? "Esconder histórico" : `Ver histórico (${history.length})`}
+          </button>
+          {showHistory && (
+            <ul className="mt-2 flex flex-col gap-2">
+              {history.map((r) => (
+                <li key={r.id} className="rounded-lg bg-surface-2 px-3 py-2 text-sm">
+                  <p className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{r.name}</span>
+                    <Badge tone={r.status === "aprovado" ? "green" : "red"}>{r.status === "aprovado" ? "Aprovado" : "Recusado"}</Badge>
+                    {r.as_test && <Badge><FlaskConical className="size-3" aria-hidden /> teste</Badge>}
+                  </p>
+                  <p className="truncate text-muted">{r.email}</p>
+                  <p className="text-xs text-muted">
+                    por <strong className="text-ink">{r.decider?.name ?? "alguém que saiu do grupo"}</strong>
+                    {r.decided_at && ` · ${fromNow(r.decided_at)}`} · pediu {fromNow(r.created_at)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </Card>
   );

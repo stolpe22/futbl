@@ -642,12 +642,16 @@ create table if not exists public.access_requests (
   decided_at  timestamptz,
   created_at  timestamptz not null default now()
 );
+-- aprovado como teste: só o admin vê no histórico
+alter table public.access_requests add column if not exists as_test boolean not null default false;
 -- um pedido pendente por email: pedir de novo só atualiza
 create unique index if not exists access_requests_pending_uniq on public.access_requests (email) where status = 'pendente';
 
 alter table public.access_requests enable row level security;
 drop policy if exists access_requests_select on public.access_requests;
-create policy access_requests_select on public.access_requests for select to authenticated using (public.is_admin());
+-- organizadores e admin veem os pedidos e o histórico de quem decidiu
+create policy access_requests_select on public.access_requests for select to authenticated
+  using (public.is_admin() or (public.is_organizer() and not as_test));
 
 -- Envia (ou atualiza) um pedido. Responde o que aconteceu, sem revelar dados de ninguém.
 create or replace function public.request_access(p_name text, p_email text, p_phone text default null, p_note text default null)
@@ -668,22 +672,24 @@ begin
 end $$;
 grant execute on function public.request_access(text, text, text, text) to anon, authenticated;
 
--- Admin decide: aprovar cria o convite (jogador; pode marcar como teste)
+-- Organizador ou admin decide: aprovar cria o convite de jogador (só o admin pode marcar como teste).
+-- Fica registrado quem decidiu e quando.
 create or replace function public.decide_access_request(p_id uuid, p_approve boolean, p_test boolean default false)
 returns void language plpgsql security definer set search_path = public as $$
 declare r public.access_requests;
 begin
-  if not public.is_admin() then raise exception 'Só o admin pode aprovar pedidos de acesso'; end if;
+  if not public.is_organizer() then raise exception 'Só organizadores podem aprovar pedidos de acesso'; end if;
+  p_test := coalesce(p_test, false) and public.is_admin();
   select * into r from public.access_requests where id = p_id and status = 'pendente' for update;
   if not found then raise exception 'Esse pedido já foi decidido'; end if;
   if p_approve then
     insert into public.invites (email, role, name, invited_by, is_test)
-    values (r.email, 'jogador', r.name, auth.uid(), coalesce(p_test, false))
+    values (r.email, 'jogador', r.name, auth.uid(), p_test)
     on conflict (email) do nothing;
   end if;
   update public.access_requests
      set status = case when p_approve then 'aprovado'::public.request_status else 'recusado'::public.request_status end,
-         decided_by = auth.uid(), decided_at = now()
+         decided_by = auth.uid(), decided_at = now(), as_test = p_approve and p_test
    where id = p_id;
 end $$;
 grant execute on function public.decide_access_request(uuid, boolean, boolean) to authenticated;
